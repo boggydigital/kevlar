@@ -7,32 +7,37 @@ import (
 	"path/filepath"
 )
 
-const (
-	jsonExt              = ".json"
-	filePerm os.FileMode = 0644
-	dirPerm  os.FileMode = 0755
-)
-
+// JsonValueSet is a valueSet that stores values in .json files
 type JsonValueSet struct {
 	valueSet
 }
 
+// NewJsonClient creates a JsonValueSet client at the provided
+// location, where the index and the values would be stored
 func NewJsonClient(location string) (*JsonValueSet, error) {
 	jvs := &JsonValueSet{valueSet{baseDir: location}}
 	err := jvs.readIndex()
 	return jvs, err
 }
 
-func (vs *JsonValueSet) indexPath() string {
-	return filepath.Join(vs.baseDir, indexFilename+jsonExt)
+// getExt returns extension of the files in valueSet
+func (*JsonValueSet) getExt() string {
+	return jsonExt
 }
 
-func (vs *JsonValueSet) valuePath(key string) string {
-	return filepath.Join(vs.baseDir, key+jsonExt)
+// indexPath computes filepath to a valueSet index
+func (jvs *JsonValueSet) indexPath() string {
+	return filepath.Join(jvs.baseDir, indexFilename+jvs.getExt())
 }
 
-func (vs *JsonValueSet) readIndex() error {
-	indexPath := vs.indexPath()
+// valuePath computes filepath to a value by key
+func (jvs *JsonValueSet) valuePath(key string) string {
+	return filepath.Join(jvs.baseDir, key+jvs.getExt())
+}
+
+// readIndex reads index of a valueSet
+func (jvs *JsonValueSet) readIndex() error {
+	indexPath := jvs.indexPath()
 
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 		return nil
@@ -43,53 +48,46 @@ func (vs *JsonValueSet) readIndex() error {
 		return err
 	}
 
-	if err = json.Unmarshal(bytes, &vs.index); err != nil {
-		return err
-	}
-
-	vs.initIndex()
-
-	return nil
+	return json.Unmarshal(bytes, &jvs.index)
 }
 
-func (vs *JsonValueSet) writeIndex() error {
-
-	bytes, err := json.Marshal(vs.index)
+// writeIndex writes index of a valueSet
+func (jvs *JsonValueSet) writeIndex() error {
+	bytes, err := json.Marshal(jvs.index)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(vs.indexPath(), bytes, filePerm)
+	return ioutil.WriteFile(jvs.indexPath(), bytes, filePerm)
 }
 
-func (vs *JsonValueSet) Get(key string) ([]byte, error) {
-	if !vs.Contains(key) {
+// Get returns a bytes slice value by a provided key
+func (jvs *JsonValueSet) Get(key string) ([]byte, error) {
+	if !jvs.Contains(key) {
 		return nil, nil
 	}
 
-	valuePath := vs.valuePath(key)
+	valuePath := jvs.valuePath(key)
 	if _, err := os.Stat(valuePath); os.IsNotExist(err) {
 		return nil, nil
 	}
 	return ioutil.ReadFile(valuePath)
 }
 
-func (vs *JsonValueSet) Set(key string, value []byte) error {
+// Set stores a bytes slice value by a provided key
+func (jvs *JsonValueSet) Set(key string, value []byte) error {
 	// check if value already exists and has the same hash
 	hash, err := Sha256(value)
 	if err != nil {
 		return err
 	}
 
-	// initialize index if that's one first set operation
-	//vs.initIndex()
-
-	if hash == vs.index[key].Hash {
+	if hash == jvs.index[key].Hash {
 		return nil
 	}
 
 	// write value
-	valuePath := vs.valuePath(key)
+	valuePath := jvs.valuePath(key)
 	dirPath := filepath.Dir(valuePath)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		err := os.MkdirAll(dirPath, dirPerm)
@@ -103,17 +101,19 @@ func (vs *JsonValueSet) Set(key string, value []byte) error {
 	}
 
 	// update index
-	vs.setIndex(key, hash)
-	return vs.writeIndex()
+	jvs.initIndex()
+	jvs.setIndex(key, hash)
+	return jvs.writeIndex()
 }
 
-func (vs *JsonValueSet) Remove(key string) error {
-	if !vs.Contains(key) {
+// Remove deletes value from a valueSet by a provided key
+func (jvs *JsonValueSet) Remove(key string) error {
+	if !jvs.Contains(key) {
 		return nil
 	}
 
 	// delete value
-	valuePath := vs.valuePath(key)
+	valuePath := jvs.valuePath(key)
 	if _, err := os.Stat(valuePath); os.IsNotExist(err) {
 		return nil
 	}
@@ -123,6 +123,7 @@ func (vs *JsonValueSet) Remove(key string) error {
 	}
 
 	// update index
-	delete(vs.index, key)
-	return vs.writeIndex()
+	jvs.initIndex()
+	delete(jvs.index, key)
+	return jvs.writeIndex()
 }

@@ -1,11 +1,5 @@
 package internal
 
-import "time"
-
-const (
-	indexFilename = "_index"
-)
-
 type IndexRecord struct {
 	Hash     string `json:"hash"`
 	Created  int64  `json:"created"`
@@ -17,83 +11,36 @@ type valueSet struct {
 	index   map[string]IndexRecord
 }
 
+// ValueSetClient defines functions of a key value store client
 type ValueSetClient interface {
+	getExt() string
+	// index
 	indexPath() string
-	valuePath(string) string
 	initIndex()
 	readIndex() error
 	writeIndex() error
 	removeIndex(string)
 	setIndex(string, string)
+	// values
+	valuePath(string) string
 	Get(string) ([]byte, error)
 	Set(string, []byte) error
 	Remove(string) error
 	Contains(string) bool
+	// enumerations
+	reduce(func(IndexRecord) bool) []string
 	All() []string
 	CreatedAfter(int64) []string
 	ModifiedAfter(int64) []string
 }
 
-func (vs *valueSet) initIndex() {
-	if vs.index == nil {
-		vs.index = make(map[string]IndexRecord, 0)
-	}
+// getExt returns file extension for the files in a valueSet
+func (vs *valueSet) getExt() string {
+	return ""
 }
 
-func (vs *valueSet) setIndex(key string, hash string) {
-	if _, ok := vs.index[key]; !ok {
-		vs.index[key] = IndexRecord{
-			Created: time.Now().Unix(),
-		}
-	}
-
-	vs.index[key] = IndexRecord{
-		Hash:     hash,
-		Created:  vs.index[key].Created,
-		Modified: time.Now().Unix(),
-	}
-}
-
+// Contains verifies if a value set contains provided key
 func (vs *valueSet) Contains(key string) bool {
-	if _, ok := vs.index[key]; ok {
-		return true
-	}
-	return false
-}
-
-func (vs *valueSet) All() []string {
-	if vs == nil {
-		return nil
-	}
-	keys := make([]string, 0, len(vs.index))
-	for k := range vs.index {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func (vs *valueSet) CreatedAfter(timestamp int64) []string {
-	if vs == nil {
-		return nil
-	}
-	keys := make([]string, 0, len(vs.index))
-	for k, ir := range vs.index {
-		if ir.Created > timestamp {
-			keys = append(keys, k)
-		}
-	}
-	return keys
-}
-
-func (vs *valueSet) ModifiedAfter(timestamp int64) []string {
-	if vs == nil {
-		return nil
-	}
-	keys := make([]string, 0, len(vs.index))
-	for k, ir := range vs.index {
-		if ir.Modified > timestamp {
-			keys = append(keys, k)
-		}
-	}
-	return keys
+	_, ok := vs.index[key]
+	return ok
 }
