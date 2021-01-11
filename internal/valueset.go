@@ -1,19 +1,25 @@
 package internal
 
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+)
+
 type IndexRecord struct {
 	Hash     string `json:"hash"`
 	Created  int64  `json:"created"`
 	Modified int64  `json:"modified"`
 }
 
-type valueSet struct {
+type ValueSet struct {
 	baseDir string
+	ext     string
 	index   map[string]IndexRecord
 }
 
 // ValueSetClient defines functions of a key value store client
 type ValueSetClient interface {
-	getExt() string
 	// index
 	indexPath() string
 	initIndex()
@@ -34,13 +40,88 @@ type ValueSetClient interface {
 	ModifiedAfter(int64) []string
 }
 
-// getExt returns file extension for the files in a valueSet
-func (vs *valueSet) getExt() string {
-	return ""
+// NewJsonClient creates a ValueSet client at the provided
+// location, where the index and the values would be stored
+func NewClient(location string, ext string) (*ValueSet, error) {
+	vs := &ValueSet{baseDir: location, ext: ext}
+	err := vs.readIndex()
+	return vs, err
+}
+
+// valuePath computes filepath to a value by key
+func (vs *ValueSet) valuePath(key string) string {
+	return filepath.Join(vs.baseDir, key+vs.ext)
+}
+
+// Get returns a bytes slice value by a provided key
+func (vs *ValueSet) Get(key string) ([]byte, error) {
+	if !vs.Contains(key) {
+		return nil, nil
+	}
+
+	valuePath := vs.valuePath(key)
+	if _, err := os.Stat(valuePath); os.IsNotExist(err) {
+		return nil, nil
+	}
+	return ioutil.ReadFile(valuePath)
+}
+
+// Set stores a bytes slice value by a provided key
+func (vs *ValueSet) Set(key string, value []byte) error {
+	// check if value already exists and has the same hash
+	hash, err := Sha256(value)
+	if err != nil {
+		return err
+	}
+
+	if hash == vs.index[key].Hash {
+		return nil
+	}
+
+	// write value
+	valuePath := vs.valuePath(key)
+	dirPath := filepath.Dir(valuePath)
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err := os.MkdirAll(dirPath, dirPerm)
+		if err != nil {
+			return err
+		}
+	}
+	err = ioutil.WriteFile(valuePath, value, filePerm)
+	if err != nil {
+		return err
+	}
+
+	// update index
+	vs.initIndex()
+	vs.setIndex(key, hash)
+	return vs.writeIndex()
+}
+
+// Remove deletes value from a valueSet by a provided key
+func (vs *ValueSet) Remove(key string) error {
+	if !vs.Contains(key) {
+		return nil
+	}
+
+	// delete value
+	valuePath := vs.valuePath(key)
+	if _, err := os.Stat(valuePath); os.IsNotExist(err) {
+		return nil
+	}
+
+	if err := os.Remove(valuePath); err != nil {
+		return err
+	}
+
+	// update index
+	vs.initIndex()
+	delete(vs.index, key)
+	return vs.writeIndex()
 }
 
 // Contains verifies if a value set contains provided key
-func (vs *valueSet) Contains(key string) bool {
+func (vs *ValueSet) Contains(key string) bool {
 	_, ok := vs.index[key]
 	return ok
 }

@@ -1,18 +1,53 @@
 package internal
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 )
 
+// indexPath computes filepath to a valueSet index
+func (vs *ValueSet) indexPath() string {
+	return filepath.Join(vs.baseDir, indexFilename+vs.ext)
+}
+
 // initIndex initializes index data structure
-func (vs *valueSet) initIndex() {
+func (vs *ValueSet) initIndex() {
 	if vs.index == nil {
 		vs.index = make(map[string]IndexRecord, 0)
 	}
 }
 
+// readIndex reads index of a valueSet
+func (vs *ValueSet) readIndex() error {
+	indexPath := vs.indexPath()
+
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return nil
+	}
+
+	bytes, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(bytes, &vs.index)
+}
+
+// writeIndex writes index of a valueSet
+func (vs *ValueSet) writeIndex() error {
+	bytes, err := json.Marshal(vs.index)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(vs.indexPath(), bytes, filePerm)
+}
+
 // setIndex updates index by key
-func (vs *valueSet) setIndex(key string, hash string) {
+func (vs *ValueSet) setIndex(key string, hash string) {
 	if _, ok := vs.index[key]; !ok {
 		vs.index[key] = IndexRecord{
 			Created: time.Now().Unix(),

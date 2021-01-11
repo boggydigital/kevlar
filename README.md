@@ -29,6 +29,17 @@ NOTE: Error handling omitted for brevity.
   fmt.Println(vs.ModifiedAfter(ts)) // prints: [value1]
 ```
 
+## 'kvas' operations
+
+- `NewJsonClient`
+- `Get`
+- `Set`
+- `Remove`
+- `Contains`
+- `All`
+- `CreatedAfter`
+- `ModifiedAfter`
+
 ## Frequently asked questions
 
 - Q: Is `kvas` suitable for concurrent read/write operations?

@@ -1,7 +1,7 @@
 package internal
 
 // reduce filters index records using a provided filter func
-func (vs *valueSet) reduce(filter func(IndexRecord) bool) []string {
+func (vs *ValueSet) reduce(filter func(IndexRecord) bool) []string {
 	if vs == nil {
 		return nil
 	}
@@ -15,19 +15,19 @@ func (vs *valueSet) reduce(filter func(IndexRecord) bool) []string {
 }
 
 // All returns all value keys of a valueSet
-func (vs *valueSet) All() []string {
+func (vs *ValueSet) All() []string {
 	return vs.reduce(nil)
 }
 
 // CreatedAfter returns keys of values created on or after provided timestamp
-func (vs *valueSet) CreatedAfter(timestamp int64) []string {
+func (vs *ValueSet) CreatedAfter(timestamp int64) []string {
 	return vs.reduce(func(ir IndexRecord) bool {
 		return ir.Created >= timestamp
 	})
 }
 
 // ModifiedAfter returns keys of values modified on or after provided timestamp
-func (vs *valueSet) ModifiedAfter(timestamp int64) []string {
+func (vs *ValueSet) ModifiedAfter(timestamp int64) []string {
 	return vs.reduce(func(ir IndexRecord) bool {
 		return ir.Modified >= timestamp
 	})

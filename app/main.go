@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	vs, err := kvas.NewJsonClient("test")
+	vs, err := kvas.NewClient("test", ".json")
 	if err != nil {
 		panic(err.Error())
 	}
