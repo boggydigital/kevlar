@@ -1,6 +1,7 @@
 package kvas
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -68,9 +69,13 @@ func (vs *ValueSet) Get(key string) (io.Reader, error) {
 }
 
 // Set stores a bytes slice value by a provided key
-func (vs *ValueSet) Set(key string, value io.Reader) error {
+func (vs *ValueSet) Set(key string, reader io.Reader) error {
+
+	var buf bytes.Buffer
+	tr := io.TeeReader(reader, &buf)
+
 	// check if value already exists and has the same hash
-	hash, err := Sha256(value)
+	hash, err := Sha256(tr)
 	if err != nil {
 		return err
 	}
@@ -93,8 +98,7 @@ func (vs *ValueSet) Set(key string, value io.Reader) error {
 		return err
 	}
 
-	_, err = io.Copy(file, value)
-	if err != nil {
+	if _, err = io.Copy(file, &buf); err != nil {
 		return err
 	}
 
