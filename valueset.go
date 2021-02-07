@@ -88,7 +88,7 @@ func (vs *ValueSet) Set(key string, value io.Reader) error {
 			return err
 		}
 	}
-	file, err := os.Open(valuePath)
+	file, err := os.OpenFile(valuePath, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return err
 	}
