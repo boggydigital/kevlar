@@ -1,4 +1,4 @@
-package internal
+package kvas
 
 import (
 	"encoding/json"

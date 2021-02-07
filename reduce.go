@@ -1,4 +1,4 @@
-package internal
+package kvas
 
 // reduce filters index records using a provided filter func
 func (vs *ValueSet) reduce(filter func(IndexRecord) bool) []string {
