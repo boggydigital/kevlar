@@ -43,7 +43,7 @@ type ValueSetClient interface {
 
 // NewJsonClient creates a ValueSet client at the provided
 // location, where the index and the values would be stored
-func NewClient(location string, ext string) (*ValueSet, error) {
+func NewLocal(location string, ext string) (*ValueSet, error) {
 	vs := &ValueSet{baseDir: location, ext: ext}
 	err := vs.readIndex()
 	return vs, err
@@ -56,7 +56,7 @@ func (vs *ValueSet) valuePath(key string) string {
 }
 
 // Get returns a bytes slice value by a provided key
-func (vs *ValueSet) Get(key string) (io.Reader, error) {
+func (vs *ValueSet) Get(key string) (io.ReadCloser, error) {
 	if !vs.Contains(key) {
 		return nil, nil
 	}
