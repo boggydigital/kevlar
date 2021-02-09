@@ -93,7 +93,7 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 			return err
 		}
 	}
-	file, err := os.OpenFile(valuePath, os.O_RDWR|os.O_CREATE, 0755)
+	file, err := os.Create(valuePath)
 	if err != nil {
 		return err
 	}
