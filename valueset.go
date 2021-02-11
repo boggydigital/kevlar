@@ -15,7 +15,8 @@ type IndexRecord struct {
 
 type ValueSet struct {
 	baseDir string
-	ext     string
+	indExt  string
+	valExt  string
 	index   map[string]IndexRecord
 }
 
@@ -41,17 +42,17 @@ type ValueSetClient interface {
 	ModifiedAfter(int64) []string
 }
 
-// NewJsonClient creates a ValueSet client at the provided
+// NewLocal creates a ValueSet client at the provided
 // location, where the index and the values would be stored
-func NewLocal(location string, ext string) (*ValueSet, error) {
-	vs := &ValueSet{baseDir: location, ext: ext}
+func NewLocal(location string, indExt, valExt string) (*ValueSet, error) {
+	vs := &ValueSet{baseDir: location, indExt: indExt, valExt: valExt}
 	err := vs.readIndex()
 	return vs, err
 }
 
 // valuePath computes filepath to a value by key
 func (vs *ValueSet) valuePath(key string) string {
-	vp := filepath.Join(vs.baseDir, key+vs.ext)
+	vp := filepath.Join(vs.baseDir, key+vs.valExt)
 	return vp
 }
 

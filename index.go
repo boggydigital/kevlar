@@ -11,7 +11,7 @@ import (
 
 // indexPath computes filepath to a valueSet index
 func (vs *ValueSet) indexPath() string {
-	ip := filepath.Join(vs.baseDir, indexFilename+vs.ext)
+	ip := filepath.Join(vs.baseDir, indexFilename+vs.indExt)
 	return ip
 }
 
