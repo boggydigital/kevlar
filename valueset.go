@@ -15,16 +15,20 @@ type IndexRecord struct {
 
 type ValueSet struct {
 	baseDir string
-	indExt  string
 	valExt  string
 	index   map[string]IndexRecord
 }
+
+const (
+	jsonExt = ".json"
+	gobExt  = ".gob"
+)
 
 // ValueSetClient defines functions of a key value store client
 type ValueSetClient interface {
 	// index
 	indexPath() string
-	initIndex()
+	//initIndex()
 	readIndex() error
 	writeIndex() error
 	removeIndex(string)
@@ -44,10 +48,22 @@ type ValueSetClient interface {
 
 // NewLocal creates a ValueSet client at the provided
 // location, where the index and the values would be stored
-func NewLocal(location string, indExt, valExt string) (*ValueSet, error) {
-	vs := &ValueSet{baseDir: location, indExt: indExt, valExt: valExt}
+func newLocal(dst string, valExt string) (*ValueSet, error) {
+	vs := &ValueSet{
+		baseDir: dst,
+		valExt:  valExt,
+		index:   make(map[string]IndexRecord, 0),
+	}
 	err := vs.readIndex()
 	return vs, err
+}
+
+func NewJsonLocal(dst string) (*ValueSet, error) {
+	return newLocal(dst, jsonExt)
+}
+
+func NewGobLocal(dst string) (*ValueSet, error) {
+	return newLocal(dst, gobExt)
 }
 
 // valuePath computes filepath to a value by key
@@ -104,7 +120,7 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 	}
 
 	// update index
-	vs.initIndex()
+	//vs.initIndex()
 	vs.setIndex(key, hash)
 	return vs.writeIndex()
 }
@@ -126,7 +142,7 @@ func (vs *ValueSet) Remove(key string) error {
 	}
 
 	// update index
-	vs.initIndex()
+	//vs.initIndex()
 	delete(vs.index, key)
 	return vs.writeIndex()
 }

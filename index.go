@@ -1,8 +1,7 @@
 package kvas
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"encoding/gob"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,16 +10,16 @@ import (
 
 // indexPath computes filepath to a valueSet index
 func (vs *ValueSet) indexPath() string {
-	ip := filepath.Join(vs.baseDir, indexFilename+vs.indExt)
+	ip := filepath.Join(vs.baseDir, indexFilename+gobExt)
 	return ip
 }
 
-// initIndex initializes index data structure
-func (vs *ValueSet) initIndex() {
-	if vs.index == nil {
-		vs.index = make(map[string]IndexRecord, 0)
-	}
-}
+//// initIndex initializes index data structure
+//func (vs *ValueSet) initIndex() {
+//if vs.index == nil {
+//	vs.index = make(map[string]IndexRecord, 0)
+//}
+//}
 
 // readIndex reads index of a valueSet
 func (vs *ValueSet) readIndex() error {
@@ -30,22 +29,25 @@ func (vs *ValueSet) readIndex() error {
 		return nil
 	}
 
-	bytes, err := ioutil.ReadFile(indexPath)
+	indexFile, err := os.Open(indexPath)
 	if err != nil {
 		return err
 	}
+	defer indexFile.Close()
 
-	return json.Unmarshal(bytes, &vs.index)
+	return gob.NewDecoder(indexFile).Decode(&vs.index)
 }
 
 // writeIndex writes index of a valueSet
 func (vs *ValueSet) writeIndex() error {
-	bytes, err := json.Marshal(vs.index)
+
+	indexFile, err := os.Create(vs.indexPath())
 	if err != nil {
 		return err
 	}
+	defer indexFile.Close()
 
-	return ioutil.WriteFile(vs.indexPath(), bytes, filePerm)
+	return gob.NewEncoder(indexFile).Encode(vs.index)
 }
 
 // setIndex updates index by key
