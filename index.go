@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+type IndexRecord struct {
+	Title    string `json:"title"`
+	Hash     string `json:"hash"`
+	Created  int64  `json:"created"`
+	Modified int64  `json:"modified"`
+}
+
 // indexPath computes filepath to a valueSet index
 func (vs *ValueSet) indexPath() string {
 	ip := filepath.Join(vs.baseDir, indexFilename+gobExt)
@@ -66,5 +73,19 @@ func (vs *ValueSet) setIndex(key string, hash string) {
 		}
 	} else {
 		log.Printf("ValueSet.setIndex: hash for item with key '%s' is the same", key)
+	}
+}
+
+func (vs *ValueSet) setTitle(key, title string) {
+	if _, ok := vs.index[key]; !ok {
+		return
+	}
+
+	ci := vs.index[key]
+	vs.index[key] = IndexRecord{
+		Hash:     ci.Hash,
+		Created:  ci.Created,
+		Modified: ci.Modified,
+		Title:    title,
 	}
 }

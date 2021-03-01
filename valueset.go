@@ -7,12 +7,6 @@ import (
 	"path/filepath"
 )
 
-type IndexRecord struct {
-	Hash     string `json:"hash"`
-	Created  int64  `json:"created"`
-	Modified int64  `json:"modified"`
-}
-
 type ValueSet struct {
 	baseDir string
 	valExt  string
@@ -120,7 +114,6 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 	}
 
 	// update index
-	//vs.initIndex()
 	vs.setIndex(key, hash)
 	return vs.writeIndex()
 }
@@ -142,7 +135,6 @@ func (vs *ValueSet) Remove(key string) error {
 	}
 
 	// update index
-	//vs.initIndex()
 	delete(vs.index, key)
 	return vs.writeIndex()
 }
@@ -153,4 +145,21 @@ func (vs *ValueSet) Contains(key string) bool {
 		return ok
 	}
 	return false
+}
+
+func (vs *ValueSet) Title(key string) string {
+	if !vs.Contains(key) {
+		return ""
+	}
+
+	return vs.index[key].Title
+}
+
+func (vs *ValueSet) SetTitle(key, title string) error {
+	if !vs.Contains(key) {
+		return nil
+	}
+
+	vs.setTitle(key, title)
+	return vs.writeIndex()
 }
