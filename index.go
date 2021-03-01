@@ -76,16 +76,17 @@ func (vs *ValueSet) setIndex(key string, hash string) {
 	}
 }
 
-func (vs *ValueSet) setTitle(key, title string) {
-	if _, ok := vs.index[key]; !ok {
-		return
-	}
-
-	ci := vs.index[key]
-	vs.index[key] = IndexRecord{
-		Hash:     ci.Hash,
-		Created:  ci.Created,
-		Modified: ci.Modified,
-		Title:    title,
-	}
-}
+//
+//func (vs *ValueSet) setTitle(key, title string) {
+//	if _, ok := vs.index[key]; !ok {
+//		return
+//	}
+//
+//	ci := vs.index[key]
+//	vs.index[key] = IndexRecord{
+//		Hash:     ci.Hash,
+//		Created:  ci.Created,
+//		Modified: ci.Modified,
+//		Title:    title,
+//	}
+//}

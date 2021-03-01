@@ -147,19 +147,20 @@ func (vs *ValueSet) Contains(key string) bool {
 	return false
 }
 
-func (vs *ValueSet) Title(key string) string {
-	if !vs.Contains(key) {
-		return ""
-	}
-
-	return vs.index[key].Title
-}
-
-func (vs *ValueSet) SetTitle(key, title string) error {
-	if !vs.Contains(key) {
-		return nil
-	}
-
-	vs.setTitle(key, title)
-	return vs.writeIndex()
-}
+//
+//func (vs *ValueSet) Title(key string) string {
+//	if !vs.Contains(key) {
+//		return ""
+//	}
+//
+//	return vs.index[key].Title
+//}
+//
+//func (vs *ValueSet) SetTitle(key, title string) error {
+//	if !vs.Contains(key) {
+//		return nil
+//	}
+//
+//	vs.setTitle(key, title)
+//	return vs.writeIndex()
+//}
