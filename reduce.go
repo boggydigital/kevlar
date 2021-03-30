@@ -27,8 +27,9 @@ func (vs *ValueSet) CreatedAfter(timestamp int64) []string {
 }
 
 // ModifiedAfter returns keys of values modified on or after provided timestamp
+// that were created earlier
 func (vs *ValueSet) ModifiedAfter(timestamp int64) []string {
 	return vs.reduce(func(ir IndexRecord) bool {
-		return ir.Modified >= timestamp
+		return ir.Modified >= timestamp && ir.Created < timestamp
 	})
 }
