@@ -36,3 +36,10 @@ func (vs *ValueSet) ModifiedAfter(timestamp int64, excludeCreated bool) []string
 		return ir.Modified >= timestamp
 	})
 }
+
+func (vs *ValueSet) WasModifiedAfter(id string, timestamp int64) bool {
+	if ir, ok := vs.index[id]; ok {
+		return ir.Modified > timestamp
+	}
+	return false
+}

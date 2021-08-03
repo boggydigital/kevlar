@@ -2,6 +2,7 @@ package kvas
 
 import (
 	"encoding/gob"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,19 +22,12 @@ func (vs *ValueSet) indexPath() string {
 	return ip
 }
 
-//// initIndex initializes index data structure
-//func (vs *ValueSet) initIndex() {
-//if vs.index == nil {
-//	vs.index = make(map[string]IndexRecord, 0)
-//}
-//}
-
 // readIndex reads index of a valueSet
 func (vs *ValueSet) readIndex() error {
 	indexPath := vs.indexPath()
 
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return nil
+		return fmt.Errorf("index doesn't exist")
 	}
 
 	indexFile, err := os.Open(indexPath)
@@ -75,18 +69,3 @@ func (vs *ValueSet) setIndex(key string, hash string) {
 		log.Printf("ValueSet.setIndex: hash for item with key '%s' is the same", key)
 	}
 }
-
-//
-//func (vs *ValueSet) setTitle(key, title string) {
-//	if _, ok := vs.index[key]; !ok {
-//		return
-//	}
-//
-//	ci := vs.index[key]
-//	vs.index[key] = IndexRecord{
-//		Hash:     ci.Hash,
-//		Created:  ci.Created,
-//		Modified: ci.Modified,
-//		Title:    title,
-//	}
-//}
