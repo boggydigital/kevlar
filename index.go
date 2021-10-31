@@ -2,7 +2,6 @@ package kvas
 
 import (
 	"encoding/gob"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,7 +26,8 @@ func (vs *ValueSet) readIndex() error {
 	indexPath := vs.indexPath()
 
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return fmt.Errorf("index doesn't exist")
+		return nil
+		//return fmt.Errorf("index %s doesn't exist", indexPath)
 	}
 
 	indexFile, err := os.Open(indexPath)
