@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type ValueSet struct {
@@ -94,6 +95,10 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 	if hash == vs.index[key].Hash {
 		return nil
 	}
+
+	mu := sync.Mutex{}
+	defer mu.Unlock()
+	mu.Lock()
 
 	// write value
 	valuePath := vs.valuePath(key)

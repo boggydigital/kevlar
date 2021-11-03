@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -41,6 +42,10 @@ func (vs *ValueSet) readIndex() error {
 
 // writeIndex writes index of a valueSet
 func (vs *ValueSet) writeIndex() error {
+
+	mu := sync.Mutex{}
+	defer mu.Unlock()
+	mu.Lock()
 
 	indexFile, err := os.Create(vs.indexPath())
 	if err != nil {
