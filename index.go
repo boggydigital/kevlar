@@ -2,10 +2,8 @@ package kvas
 
 import (
 	"encoding/gob"
-	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 )
 
@@ -24,6 +22,7 @@ func (vs *ValueSet) indexPath() string {
 
 // readIndex reads index of a valueSet
 func (vs *ValueSet) readIndex() error {
+
 	indexPath := vs.indexPath()
 
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
@@ -43,10 +42,6 @@ func (vs *ValueSet) readIndex() error {
 // writeIndex writes index of a valueSet
 func (vs *ValueSet) writeIndex() error {
 
-	mu := sync.Mutex{}
-	defer mu.Unlock()
-	mu.Lock()
-
 	indexFile, err := os.Create(vs.indexPath())
 	if err != nil {
 		return err
@@ -58,19 +53,20 @@ func (vs *ValueSet) writeIndex() error {
 
 // setIndex updates index by key
 func (vs *ValueSet) setIndex(key string, hash string) {
+
 	if _, ok := vs.index[key]; !ok {
 		vs.index[key] = IndexRecord{
 			Created: time.Now().Unix(),
 		}
 	}
 
-	if vs.index[key].Hash != hash {
-		vs.index[key] = IndexRecord{
-			Hash:     hash,
-			Created:  vs.index[key].Created,
-			Modified: time.Now().Unix(),
-		}
-	} else {
-		log.Printf("ValueSet.setIndex: hash for item with key '%s' is the same", key)
+	if vs.index[key].Hash == hash {
+		return
+	}
+
+	vs.index[key] = IndexRecord{
+		Hash:     hash,
+		Created:  vs.index[key].Created,
+		Modified: time.Now().Unix(),
 	}
 }

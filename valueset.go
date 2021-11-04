@@ -12,6 +12,7 @@ type ValueSet struct {
 	baseDir string
 	valExt  string
 	index   map[string]IndexRecord
+	mutex   sync.Mutex
 }
 
 const (
@@ -48,6 +49,7 @@ func newLocal(dst string, valExt string) (*ValueSet, error) {
 		baseDir: dst,
 		valExt:  valExt,
 		index:   make(map[string]IndexRecord, 0),
+		mutex:   sync.Mutex{},
 	}
 	err := vs.readIndex()
 	return vs, err
@@ -69,6 +71,7 @@ func (vs *ValueSet) valuePath(key string) string {
 
 // Get returns a bytes slice value by a provided key
 func (vs *ValueSet) Get(key string) (io.ReadCloser, error) {
+
 	if !vs.Contains(key) {
 		return nil, nil
 	}
@@ -92,13 +95,14 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 		return err
 	}
 
+	vs.mutex.Lock()
+
 	if hash == vs.index[key].Hash {
+		vs.mutex.Unlock()
 		return nil
 	}
 
-	mu := sync.Mutex{}
-	defer mu.Unlock()
-	mu.Lock()
+	vs.mutex.Unlock()
 
 	// write value
 	valuePath := vs.valuePath(key)
@@ -118,6 +122,9 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 		return err
 	}
 
+	vs.mutex.Lock()
+	defer vs.mutex.Unlock()
+
 	// update index
 	vs.setIndex(key, hash)
 	return vs.writeIndex()
@@ -125,6 +132,7 @@ func (vs *ValueSet) Set(key string, reader io.Reader) error {
 
 // Remove deletes value from a valueSet by a provided key
 func (vs *ValueSet) Remove(key string) error {
+
 	if !vs.Contains(key) {
 		return nil
 	}
@@ -139,6 +147,9 @@ func (vs *ValueSet) Remove(key string) error {
 		return err
 	}
 
+	vs.mutex.Lock()
+	defer vs.mutex.Unlock()
+
 	// update index
 	delete(vs.index, key)
 	return vs.writeIndex()
@@ -146,26 +157,11 @@ func (vs *ValueSet) Remove(key string) error {
 
 // Contains verifies if a value set contains provided key
 func (vs *ValueSet) Contains(key string) bool {
+	vs.mutex.Lock()
+	defer vs.mutex.Unlock()
+
 	if _, ok := vs.index[key]; ok {
 		return ok
 	}
 	return false
 }
-
-//
-//func (vs *ValueSet) Title(key string) string {
-//	if !vs.Contains(key) {
-//		return ""
-//	}
-//
-//	return vs.index[key].Title
-//}
-//
-//func (vs *ValueSet) SetTitle(key, title string) error {
-//	if !vs.Contains(key) {
-//		return nil
-//	}
-//
-//	vs.setTitle(key, title)
-//	return vs.writeIndex()
-//}

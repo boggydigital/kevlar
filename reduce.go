@@ -6,11 +6,14 @@ func (vs *ValueSet) reduce(filter func(IndexRecord) bool) []string {
 		return nil
 	}
 	keys := make([]string, 0, len(vs.index))
+
+	vs.mutex.Lock()
 	for k, ir := range vs.index {
 		if (filter != nil && filter(ir)) || filter == nil {
 			keys = append(keys, k)
 		}
 	}
+	vs.mutex.Unlock()
 	return keys
 }
 
@@ -38,6 +41,9 @@ func (vs *ValueSet) ModifiedAfter(timestamp int64, excludeCreated bool) []string
 }
 
 func (vs *ValueSet) WasModifiedAfter(id string, timestamp int64) bool {
+	vs.mutex.Lock()
+	defer vs.mutex.Unlock()
+
 	if ir, ok := vs.index[id]; ok {
 		return ir.Modified > timestamp
 	}
