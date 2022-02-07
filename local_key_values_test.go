@@ -41,8 +41,8 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 		get map[string]bool
 	}{
 		{nil, nil},
-		{[]string{"1", "1"}, map[string]bool{"1": false}},
-		{[]string{"1", "2"}, map[string]bool{"1": false, "2": false, "3": true}},
+		{[]string{"x1", "x1"}, map[string]bool{"x1": false}},
+		{[]string{"y1", "y2"}, map[string]bool{"y1": false, "y2": false, "y3": true}},
 	}
 
 	for ii, tt := range tests {
@@ -71,7 +71,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 				var val []byte
 				buf := bytes.NewBuffer(val)
 				num, err := io.Copy(buf, rc)
-				testo.EqualValues(t, num, int64(1))
+				testo.EqualValues(t, num, int64(len(gk)))
 				testo.EqualValues(t, gk, buf.String())
 
 				testo.Error(t, rc.Close(), false)
