@@ -7,23 +7,20 @@ import (
 	"time"
 )
 
-type IndexRecord struct {
-	Title    string `json:"title"`
+const indexFilename = "_index" + GobExt
+
+type record struct {
+	//Title    string `json:"title"`
 	Hash     string `json:"hash"`
 	Created  int64  `json:"created"`
 	Modified int64  `json:"modified"`
 }
 
-// indexPath computes filepath to a valueSet index
-func (vs *ValueSet) indexPath() string {
-	ip := filepath.Join(vs.baseDir, indexFilename+gobExt)
-	return ip
-}
+type index map[string]record
 
-// readIndex reads index of a valueSet
-func (vs *ValueSet) readIndex() error {
+func (idx index) read(dir string) error {
 
-	indexPath := vs.indexPath()
+	indexPath := filepath.Join(dir, indexFilename)
 
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 		return nil
@@ -36,37 +33,37 @@ func (vs *ValueSet) readIndex() error {
 	}
 	defer indexFile.Close()
 
-	return gob.NewDecoder(indexFile).Decode(&vs.index)
+	return gob.NewDecoder(indexFile).Decode(&idx)
 }
 
-// writeIndex writes index of a valueSet
-func (vs *ValueSet) writeIndex() error {
+func (idx index) write(dir string) error {
 
-	indexFile, err := os.Create(vs.indexPath())
+	indexPath := filepath.Join(dir, indexFilename)
+
+	indexFile, err := os.Create(indexPath)
 	if err != nil {
 		return err
 	}
 	defer indexFile.Close()
 
-	return gob.NewEncoder(indexFile).Encode(vs.index)
+	return gob.NewEncoder(indexFile).Encode(idx)
 }
 
-// setIndex updates index by key
-func (vs *ValueSet) setIndex(key string, hash string) {
+func (idx index) upd(key string, hash string) {
 
-	if _, ok := vs.index[key]; !ok {
-		vs.index[key] = IndexRecord{
+	if _, ok := idx[key]; !ok {
+		idx[key] = record{
 			Created: time.Now().Unix(),
 		}
 	}
 
-	if vs.index[key].Hash == hash {
+	if idx[key].Hash == hash {
 		return
 	}
 
-	vs.index[key] = IndexRecord{
+	idx[key] = record{
 		Hash:     hash,
-		Created:  vs.index[key].Created,
+		Created:  idx[key].Created,
 		Modified: time.Now().Unix(),
 	}
 }
