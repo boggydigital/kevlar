@@ -22,10 +22,10 @@ func TestIndexKeys(t *testing.T) {
 
 func TestIndexCreatedAfter(t *testing.T) {
 	tests := []struct {
-		new []string
+		new map[string]bool
 	}{
-		{[]string{"n1"}},
-		{[]string{"n1", "n2", "n3"}},
+		{map[string]bool{"n1": true}},
+		{map[string]bool{"n1": true, "n2": true, "n3": true}},
 	}
 
 	for ii, tt := range tests {
@@ -33,12 +33,16 @@ func TestIndexCreatedAfter(t *testing.T) {
 			start := time.Now().Unix() - 1
 			idx := mockIndex()
 
-			for _, n := range tt.new {
+			for n := range tt.new {
 				idx.upd(n, n)
 			}
 
 			res := idx.CreatedAfter(start, mtx)
-			testo.DeepEqual(t, res, tt.new)
+			testo.EqualValues(t, len(res), len(tt.new))
+			for _, r := range res {
+				_, ok := tt.new[r]
+				testo.EqualValues(t, ok, true)
+			}
 		})
 	}
 }
