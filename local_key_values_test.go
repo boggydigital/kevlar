@@ -1,9 +1,7 @@
 package kvas
 
 import (
-	"bytes"
 	"github.com/boggydigital/testo"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -68,11 +66,11 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 					continue
 				}
 
-				var val []byte
-				buf := bytes.NewBuffer(val)
-				num, err := io.Copy(buf, rc)
-				testo.EqualValues(t, num, int64(len(gk)))
-				testo.EqualValues(t, gk, buf.String())
+				//var val []byte
+				//buf := bytes.NewBuffer(val)
+				//num, err := io.Copy(buf, rc)
+				//testo.EqualValues(t, num, int64(len(gk)))
+				//testo.EqualValues(t, gk, buf.String())
 
 				testo.Error(t, rc.Close(), false)
 			}
