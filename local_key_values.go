@@ -96,6 +96,7 @@ func (lkv *localKeyValues) Set(key string, reader io.Reader) error {
 		}
 	}
 	file, err := os.Create(valuePath)
+	defer file.Close()
 	if err != nil {
 		return err
 	}
