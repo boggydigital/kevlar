@@ -23,7 +23,7 @@ const (
 
 const dirPerm os.FileMode = 0755
 
-func ConnectLocal(dir string, ext string) (KeyValuesFilters, error) {
+func ConnectLocal(dir string, ext string) (KeyValues, error) {
 
 	switch ext {
 	case JsonExt:

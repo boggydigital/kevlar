@@ -18,7 +18,7 @@ func mockIndex() index {
 	return idx
 }
 
-func cleanup() error {
+func indexCleanup() error {
 	idxPath := filepath.Join(os.TempDir(), indexFilename)
 	if _, err := os.Stat(idxPath); err != nil {
 		if os.IsNotExist(err) {
@@ -31,7 +31,7 @@ func cleanup() error {
 }
 
 func TestIndexReadNothing(t *testing.T) {
-	testo.Error(t, cleanup(), false)
+	testo.Error(t, indexCleanup(), false)
 	idx := index{}
 	testo.Error(t, idx.read(os.TempDir()), false)
 	testo.EqualValues(t, len(idx), 0)
@@ -44,7 +44,7 @@ func TestIndexWriteRead(t *testing.T) {
 	testo.EqualValues(t, len(idx), 0)
 	testo.Error(t, idx.read(os.TempDir()), false)
 	testo.DeepEqual(t, idx, mockIndex())
-	testo.Error(t, cleanup(), false)
+	testo.Error(t, indexCleanup(), false)
 }
 
 func TestIndexUpd(t *testing.T) {

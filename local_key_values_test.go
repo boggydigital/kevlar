@@ -30,7 +30,7 @@ func TestConnectLocal(t *testing.T) {
 			testo.Nil(t, lkv, tt.expNil)
 			testo.Error(t, err, tt.expErr)
 
-			testo.Error(t, cleanup(), false)
+			testo.Error(t, indexCleanup(), false)
 		})
 	}
 }
@@ -86,7 +86,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 				testo.Error(t, err, false)
 			}
 
-			testo.Error(t, cleanup(), false)
+			testo.Error(t, indexCleanup(), false)
 		})
 	}
 }
