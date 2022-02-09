@@ -19,18 +19,22 @@ func ConnectRedux(dir, asset string) (ReduxValues, error) {
 	}
 
 	arc, err := rdx.Get(asset)
-	defer arc.Close()
+	if arc != nil {
+		defer arc.Close()
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	var keyReductions map[string][]string
-	if err := gob.NewDecoder(arc).Decode(&keyReductions); err != nil {
-		return nil, err
+	if arc != nil {
+		if err := gob.NewDecoder(arc).Decode(&keyReductions); err != nil {
+			return nil, err
+		}
 	}
 
 	if keyReductions == nil {
-		keyReductions = make(map[string][]string, 0)
+		keyReductions = make(map[string][]string)
 	}
 
 	return &redux{
@@ -116,14 +120,6 @@ func (rdx *redux) write() error {
 	return kv.Set(rdx.asset, buf)
 }
 
-func (rdx *redux) GetAllValues(key string) ([]string, bool) {
-	if rdx == nil || rdx.keyReductions == nil {
-		return nil, false
-	}
-	val, ok := rdx.keyReductions[key]
-	return val, ok
-}
-
 func (rdx *redux) GetFirstVal(key string) (string, bool) {
 	values, ok := rdx.GetAllValues(key)
 	if ok && len(values) > 0 {
@@ -132,9 +128,20 @@ func (rdx *redux) GetFirstVal(key string) (string, bool) {
 	return "", false
 }
 
-func (rdx *redux) Match(terms []string, scope []string, anyCase bool, contains bool) map[string]bool {
+func (rdx *redux) GetAllValues(key string) ([]string, bool) {
+	if rdx == nil || rdx.keyReductions == nil {
+		return nil, false
+	}
+	val, ok := rdx.keyReductions[key]
+	return val, ok
+}
+
+func (rdx *redux) Match(terms []string, scope map[string]bool, anyCase bool, contains bool) map[string]bool {
 	if scope == nil {
-		scope = rdx.Keys()
+		scope = make(map[string]bool)
+		for _, k := range rdx.Keys() {
+			scope[k] = true
+		}
 	}
 
 	matches := make(map[string]bool)
@@ -142,7 +149,7 @@ func (rdx *redux) Match(terms []string, scope []string, anyCase bool, contains b
 		if anyCase {
 			term = strings.ToLower(term)
 		}
-		for _, key := range scope {
+		for key := range scope {
 			if values, ok := rdx.GetAllValues(key); !ok {
 				continue
 			} else if anyValueMatchesTerm(term, values, anyCase, contains) {

@@ -29,10 +29,12 @@ type FirstValueGetter interface {
 }
 
 type TermsMatcher interface {
-	Match([]string, []string, bool, bool) map[string]bool
+	Match([]string, map[string]bool, bool, bool) map[string]bool
 }
 
 type ReduxValues interface {
+	KeysEnumerator
+	PresenceChecker
 	ValuePresenceChecker
 	ValueAdder
 	ValuesReplacer

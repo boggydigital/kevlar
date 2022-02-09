@@ -9,19 +9,23 @@ import (
 	"testing"
 )
 
-const testAsset = "test_asset"
+const (
+	testAsset   = "test_asset"
+	detailAsset = "detail_asset"
+)
 
-func reduxCleanup() error {
-	rdxPath := filepath.Join(os.TempDir(), testAsset+GobExt)
-	if _, err := os.Stat(rdxPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
+func reduxCleanup(assets ...string) error {
+	for _, asset := range assets {
+		rdxPath := filepath.Join(os.TempDir(), asset+GobExt)
+		if _, err := os.Stat(rdxPath); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
 		}
-		return err
-	}
-
-	if err := os.Remove(rdxPath); err != nil {
-		return err
+		if err := os.Remove(rdxPath); err != nil {
+			return err
+		}
 	}
 
 	return indexCleanup()
@@ -40,6 +44,18 @@ func mockRedux() *redux {
 	}
 }
 
+func mockDetailsRedux() *redux {
+	return &redux{
+		dir:   os.TempDir(),
+		asset: detailAsset,
+		keyReductions: map[string][]string{
+			"v1": {"d1", "d2"},
+			"v2": {"d21", "d22"},
+			"v3": {"d31", "d32"},
+		},
+	}
+}
+
 func TestReduxWriteConnect(t *testing.T) {
 	wrdx := &redux{
 		dir:           os.TempDir(),
@@ -53,7 +69,7 @@ func TestReduxWriteConnect(t *testing.T) {
 	testo.Error(t, err, false)
 	testo.Nil(t, rdx, false)
 
-	testo.Error(t, reduxCleanup(), false)
+	testo.Error(t, reduxCleanup(testAsset), false)
 }
 
 func TestReduxKeys(t *testing.T) {
@@ -120,7 +136,7 @@ func TestReduxAddVal(t *testing.T) {
 			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), tt.exist)
 			testo.Error(t, rdx.AddVal(tt.key, tt.val), false)
 			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), true)
-			testo.Error(t, reduxCleanup(), false)
+			testo.Error(t, reduxCleanup(testAsset), false)
 		})
 	}
 }
@@ -141,7 +157,7 @@ func TestReduxReplaceValues(t *testing.T) {
 			rdx := mockRedux()
 			testo.Error(t, rdx.ReplaceValues(tt.key, tt.values...), false)
 			testo.DeepEqual(t, rdx.keyReductions[tt.key], tt.values)
-			testo.Error(t, reduxCleanup(), false)
+			testo.Error(t, reduxCleanup(testAsset), false)
 		})
 	}
 }
@@ -163,7 +179,7 @@ func TestReduxBatchReplaceValues(t *testing.T) {
 			for key, values := range tt.keyValues {
 				testo.DeepEqual(t, rdx.keyReductions[key], values)
 			}
-			testo.Error(t, reduxCleanup(), false)
+			testo.Error(t, reduxCleanup(testAsset), false)
 		})
 	}
 }
@@ -184,7 +200,7 @@ func TestReduxCutVal(t *testing.T) {
 			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), tt.exist)
 			testo.Error(t, rdx.CutVal(tt.key, tt.val), false)
 			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), false)
-			testo.Error(t, reduxCleanup(), false)
+			testo.Error(t, reduxCleanup(testAsset), false)
 		})
 	}
 }
@@ -206,7 +222,7 @@ func TestReduxGetAllValues(t *testing.T) {
 				testo.DeepEqual(t, rdx.keyReductions[tt.key], values)
 			}
 			testo.EqualValues(t, ok, tt.ok)
-			testo.Error(t, reduxCleanup(), false)
+			testo.Error(t, reduxCleanup(testAsset), false)
 		})
 	}
 }
@@ -228,7 +244,7 @@ func TestReduxGetFirstVal(t *testing.T) {
 				testo.DeepEqual(t, rdx.keyReductions[tt.key][0], fv)
 			}
 			testo.EqualValues(t, ok, tt.ok)
-			testo.Error(t, reduxCleanup(), false)
+			testo.Error(t, reduxCleanup(testAsset), false)
 		})
 	}
 }
@@ -261,7 +277,7 @@ func TestAnyValueMatchesTerm(t *testing.T) {
 func TestReduxMatch(t *testing.T) {
 	tests := []struct {
 		terms    []string
-		scope    []string
+		scope    map[string]bool
 		anyCase  bool
 		contains bool
 		matches  []string
@@ -269,12 +285,12 @@ func TestReduxMatch(t *testing.T) {
 		{[]string{"11"}, nil, false, false, []string{}},
 		{[]string{"11"}, nil, false, true, []string{"k2"}},
 		{[]string{"11"}, nil, true, true, []string{"k2"}},
-		{[]string{"11"}, []string{"k1", "k3"}, true, true, []string{}},
+		{[]string{"11"}, map[string]bool{"k1": true, "k3": true}, true, true, []string{}},
 		{[]string{"V12"}, nil, false, false, []string{}},
 		{[]string{"V12"}, nil, true, false, []string{"k2"}},
 		{[]string{"V12"}, nil, false, true, []string{}},
 		{[]string{"V12"}, nil, true, true, []string{"k2", "k3", "k4"}},
-		{[]string{"V12"}, []string{"k4", "k5"}, true, true, []string{"k4"}},
+		{[]string{"V12"}, map[string]bool{"k4": true, "k5": true}, true, true, []string{"k4"}},
 	}
 
 	rdx := mockRedux()
