@@ -138,14 +138,18 @@ func (rl *reduxList) GetAllValues(asset, key string) ([]string, bool) {
 	return rl.transitionValues(asset, values...), ok
 }
 
-// appendReverseReplacedTerms adds reversed replaced terms for a (replaced) property
-// example: pr-id is replaced with pr-name: pr-id: "1", pr-name: "property_one"
-// query is {pr-id: {"property1"}}. appendReverseReplacedTerms would transform that to
-// {pr-id: {"property_one", "1"}} and objects that have pr-id:"1" would match
+//appendReverseReplacedTerms adds reversed transitioned (original) terms
+//for a (transitioned) property.
+//Example: pr-id is transitive with pr-name: pr-id: "1", pr-name: "property_one"
+//would result in pr-id value displayed in "property_one (1)".
+//Matching example: for a query {pr-id: {"property_one"}}, appendReverseReplacedTerms
+//would transform that to {pr-id: {"property_one", "1"}} and objects that have
+//pr-id:"1" would match.
+//Note: reverse transitions automatically take atomicity into account.
 func (rl *reduxList) appendReverseTransitions(asset string, terms []string, anyCase bool) []string {
 	if rl.fabric.Transitives.IsTransitive(asset) {
 		rp := rl.fabric.Transitives.Transition(asset)
-		atomic := !rl.fabric.Atomics.IsAtomic(asset)
+		atomic := rl.fabric.Atomics.IsAtomic(rp)
 		sourceTerms := rl.reductions[rp].Match(terms, nil, anyCase, !atomic)
 		for t := range sourceTerms {
 			terms = append(terms, t)
@@ -154,8 +158,8 @@ func (rl *reduxList) appendReverseTransitions(asset string, terms []string, anyC
 	return terms
 }
 
-//TODO: needs documentation
-func (rl *reduxList) matchTransitioned(asset string, scope map[string]bool, terms []string, anyCase bool) map[string]bool {
+//matchDetailed
+func (rl *reduxList) matchDetailed(asset string, scope map[string]bool, terms []string, anyCase bool) map[string]bool {
 	details := rl.fabric.Aggregates.Detail(asset)
 	matches := make(map[string]bool, 0)
 	for _, da := range details {
@@ -172,11 +176,10 @@ func (rl *reduxList) matchTransitioned(asset string, scope map[string]bool, term
 }
 
 func (rl *reduxList) Match(query map[string][]string, anyCase bool) map[string]bool {
-
 	var matches map[string]bool
 	for asset, terms := range query {
 		if rl.fabric.Aggregates.IsAggregate(asset) {
-			matches = rl.matchTransitioned(asset, matches, terms, anyCase)
+			matches = rl.matchDetailed(asset, matches, terms, anyCase)
 		} else {
 			atomic := rl.fabric.Atomics.IsAtomic(asset)
 			matches = rl.reductions[asset].Match(
