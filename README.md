@@ -1,47 +1,110 @@
-# Kvas
+# kvas
 
-`kvas` is a key value store with the following features: writes only happen for new data (verified with a SHA-256 hash); modifications are timestamped, allowing querying last modified by a timestamp. Kvas builds an in-memory index, allowing fast operations like confirming whether value set contains a key and enumerations. Values in a value set are stored individually as files.
+`kvas` is a minimal overhead key value store backed by the filesystem. 
+
+It comes with the following features: 
+- writes only happen for new data (verified with a SHA-256 hash); 
+- modifications are timestamped, allowing querying last modified by a timestamp; 
+- an in-memory index, allowing fast operations like confirming whether value set contains a key, enumerations;
+- specific values in a set are stored individually as files;
+- reductions - a slice of property values per key for fast in-memory operations like finding all keys that match specific value.
+- list of reduction - a slice of reductions with additional fabric that establishes data relationships for transparent common operations (aliasing, joins).
 
 ## Using `kvas` in your app
 
 - Run go get `github.com/boggydigital/kvas`
-- In your app import `github.com/boggydgital/kvas`
-- For a value set - create new JSON Client with `kvas.NewJsonClient(value_set_location)`
-- Use this value set client as appropriate for your app
+- Import `github.com/boggydigital/kvas`
+- For a key value set - connect to a local store with `kvas.ConnectLocal(directory, extension)`
+  - Extensions supported: `kvas.JsonExt (.json)`, `kvas.GobExt (.gob)`
+- Use this key value set client to `Get`, `Set`, `Cut` values, as well as filter using `CreatedAfter`, `ModifiedAfter`, etc.
 
-## Example usage of `kvas`
+## Key types provided by `kvas`
+
+`kvas` comes with the following types:
+- `KeyValues` - key value store backed by local filesystem
+- `ReduxValues` - key reductions store (backed by `kvas.KeyValues`)
+- `ReduxAssets` - collection of `ReduxValues` plus additional data relationship fabric
+
+## Example usage of `kvas.KeyValues`
 
 NOTE: Error handling omitted for brevity.
 
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"time"
+	"github.com/boggydigital/kvas"
+)
+
+func main() {
+
+	lkv, _ := kvas.ConnectLocal(os.TempDir(), kvas.JsonExt)
+
+	key := "value1"
+	start := time.Now().Unix()
+
+	_ = lkv.Set(key, strings.NewReader(key))
+
+	if lkv.Has(key) {
+		readCloser, _ := lkv.Get(key)
+		defer readCloser.Close()
+		// use readCloser to read data stored under "value1" key
+	}
+
+	fmt.Println(lkv.ModifiedAfter(start, false)) // prints: [value1]
+}
 ```
-  vs, _ := kvas.NewJsonClient("test")
 
-  key := "value1"
-  ts := time.Now().Unix()
+## Example usage of `kvas.ReduxValues`
 
-  _ = vs.Set(key, []byte(key))
+NOTE: Error handling omitted for brevity.
 
-  if vs.Contains(key) {
-    bytes, _ := vs.Get(key)
-	fmt.Println(string(bytes)) // prints: value1
-  } 
+```go
+package main
 
-  fmt.Println(vs.ModifiedAfter(ts)) // prints: [value1]
+import (
+	"os"
+	"github.com/boggydigital/kvas"
+)
+
+func main() {
+	rdx, _ := kvas.ConnectRedux(os.TempDir(), "titles")
+
+	for _, key := range rdx.Keys() {
+		allKeyTitles, _ := rdx.GetAllValues(key)
+		// process all titles for a key
+	}
+
+	// find all keys that have values containing "specific_title" (any case) 
+	matches := rdx.Match([]string{"specific_title"}, nil, true, true)
+}
 ```
 
-## 'kvas' operations
+## Example usage of `kvas.ReduxAssets`
 
-- `NewJsonClient`
-- `Get`
-- `Set`
-- `Remove`
-- `Contains`
-- `All`
-- `CreatedAfter`
-- `ModifiedAfter`
+NOTE: Error handling omitted for brevity.
 
-## Frequently asked questions
+```go
+package main
 
-- Q: Is `kvas` suitable for concurrent read/write operations?
-- A: Yes with a note. `Kvas` itself makes no effort to protect indexes with locks, instead you're encouraged to leverage Go language features like channels (along with `select`).
+import (
+	"os"
+	"github.com/boggydigital/kvas"
+)
 
+func main() {
+	rxa, _ := kvas.ConnectReduxAssets(os.TempDir(), nil, "titles", "country")
+	
+	query := map[string][]string{
+		"title": {"title1", "title2"},
+		"country": {"states"},
+    }
+	
+	// find all keys across "titles" and "countries" reductions that match query
+	matches := rxa.Match(query, true)
+}
+```

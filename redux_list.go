@@ -10,7 +10,7 @@ type reduxList struct {
 	fabric     *ReduxFabric
 }
 
-func ConnectReduxList(dir string, fabric *ReduxFabric, assets ...string) (ReduxAssets, error) {
+func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (ReduxAssets, error) {
 	reductions := make(map[string]ReduxValues)
 	var err error
 

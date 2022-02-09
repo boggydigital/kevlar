@@ -25,8 +25,8 @@ func reduxListCleanup() error {
 	return reduxCleanup(append(mockAssets, testAsset, detailAsset)...)
 }
 
-func TestConnectReduxList(t *testing.T) {
-	rxl, err := ConnectReduxList(os.TempDir(), nil, mockAssets...)
+func TestConnectReduxAssets(t *testing.T) {
+	rxl, err := ConnectReduxAssets(os.TempDir(), nil, mockAssets...)
 	testo.Error(t, err, false)
 	testo.Nil(t, rxl, false)
 	testo.Error(t, reduxListCleanup(), false)
