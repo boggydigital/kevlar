@@ -10,7 +10,6 @@ import (
 const indexFilename = "_index" + GobExt
 
 type record struct {
-	//Title    string `json:"title"`
 	Hash     string `json:"hash"`
 	Created  int64  `json:"created"`
 	Modified int64  `json:"modified"`
