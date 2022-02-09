@@ -30,33 +30,20 @@ It comes with the following features:
 NOTE: Error handling omitted for brevity.
 
 ```go
-package main
+lkv, _ := kvas.ConnectLocal(os.TempDir(), kvas.JsonExt)
 
-import (
-	"fmt"
-	"os"
-	"strings"
-	"time"
-	"github.com/boggydigital/kvas"
-)
+key := "value1"
+start := time.Now().Unix()
 
-func main() {
+_ = lkv.Set(key, strings.NewReader(key))
 
-	lkv, _ := kvas.ConnectLocal(os.TempDir(), kvas.JsonExt)
-
-	key := "value1"
-	start := time.Now().Unix()
-
-	_ = lkv.Set(key, strings.NewReader(key))
-
-	if lkv.Has(key) {
-		readCloser, _ := lkv.Get(key)
-		defer readCloser.Close()
-		// use readCloser to read data stored under "value1" key
-	}
-
-	fmt.Println(lkv.ModifiedAfter(start, false)) // prints: [value1]
+if lkv.Has(key) {
+    readCloser, _ := lkv.Get(key)
+    defer readCloser.Close()
+    // use readCloser to read data stored under "value1" key
 }
+
+fmt.Println(lkv.ModifiedAfter(start, false)) // prints: [value1]
 ```
 
 ## Example usage of `kvas.ReduxValues`
@@ -64,24 +51,15 @@ func main() {
 NOTE: Error handling omitted for brevity.
 
 ```go
-package main
+rdx, _ := kvas.ConnectRedux(os.TempDir(), "titles")
 
-import (
-	"os"
-	"github.com/boggydigital/kvas"
-)
-
-func main() {
-	rdx, _ := kvas.ConnectRedux(os.TempDir(), "titles")
-
-	for _, key := range rdx.Keys() {
-		allKeyTitles, _ := rdx.GetAllValues(key)
-		// process all titles for a key
-	}
-
-	// find all keys that have values containing "specific_title" (any case) 
-	matches := rdx.Match([]string{"specific_title"}, nil, true, true)
+for _, key := range rdx.Keys() {
+    allKeyTitles, _ := rdx.GetAllValues(key)
+    // process all titles for a key
 }
+
+// find all keys that have values containing "specific_title" (any case) 
+matches := rdx.Match([]string{"specific_title"}, nil, true, true)
 ```
 
 ## Example usage of `kvas.ReduxAssets`
@@ -89,22 +67,13 @@ func main() {
 NOTE: Error handling omitted for brevity.
 
 ```go
-package main
+rxa, _ := kvas.ConnectReduxAssets(os.TempDir(), nil, "titles", "country")
 
-import (
-	"os"
-	"github.com/boggydigital/kvas"
-)
-
-func main() {
-	rxa, _ := kvas.ConnectReduxAssets(os.TempDir(), nil, "titles", "country")
-	
-	query := map[string][]string{
-		"title": {"title1", "title2"},
-		"country": {"states"},
-    }
-	
-	// find all keys across "titles" and "countries" reductions that match query
-	matches := rxa.Match(query, true)
+query := map[string][]string{
+    "title": {"title1", "title2"},
+    "country": {"states"},
 }
+
+// find all keys across "titles" and "countries" reductions that match query
+matches := rxa.Match(query, true)
 ```
