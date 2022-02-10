@@ -5,7 +5,6 @@ import (
 )
 
 type reduxList struct {
-	assets     []string
 	reductions map[string]ReduxValues
 	fabric     *ReduxFabric
 }
@@ -16,9 +15,7 @@ func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (Redu
 
 	fabric = initFabric(fabric)
 
-	details := fabric.Aggregates.DetailAll(assets...)
-
-	for d := range details {
+	for d := range fabric.Aggregates.DetailAll(assets...) {
 		reductions[d], err = ConnectRedux(dir, d)
 		if err != nil {
 			return nil, err
@@ -36,7 +33,6 @@ func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (Redu
 	}
 
 	return &reduxList{
-		assets:     assets,
 		reductions: reductions,
 		fabric:     fabric,
 	}, nil
@@ -193,13 +189,8 @@ func (rl *reduxList) Match(query map[string][]string, anyCase bool) map[string]b
 }
 
 func (rl *reduxList) IsSupported(assets ...string) error {
-	supported := make(map[string]bool, len(rl.assets))
-	for _, sp := range rl.assets {
-		supported[sp] = true
-	}
-
 	for _, a := range assets {
-		if !supported[a] {
+		if _, ok := rl.reductions[a]; !ok {
 			return fmt.Errorf("unsupported asset %s", a)
 		}
 	}

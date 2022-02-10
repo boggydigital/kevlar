@@ -8,11 +8,8 @@ import (
 	"testing"
 )
 
-var mockAssets = []string{"a1", "a2"}
-
 func mockReduxList() *reduxList {
 	return &reduxList{
-		assets: mockAssets,
 		reductions: map[string]ReduxValues{
 			"a1": mockRedux(),
 			"a2": mockDetailsRedux(),
@@ -21,15 +18,43 @@ func mockReduxList() *reduxList {
 	}
 }
 
+func mockAssets() []string {
+	assets := []string{}
+	rxa := mockReduxList()
+	for a := range rxa.reductions {
+		assets = append(assets, a)
+	}
+	return assets
+}
+
 func reduxListCleanup() error {
-	return reduxCleanup(append(mockAssets, testAsset, detailAsset)...)
+	return reduxCleanup(append(mockAssets(), testAsset, detailAsset)...)
 }
 
 func TestConnectReduxAssets(t *testing.T) {
-	rxl, err := ConnectReduxAssets(os.TempDir(), nil, mockAssets...)
-	testo.Error(t, err, false)
-	testo.Nil(t, rxl, false)
-	testo.Error(t, reduxListCleanup(), false)
+	tests := []struct {
+		aggregates    map[string][]string
+		assets        []string
+		connectionErr bool
+	}{
+		{nil, mockAssets(), false},
+		{map[string][]string{"a1": {"a2"}}, []string{"a2"}, false},
+	}
+
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			fabric := initFabric(nil)
+			fabric.Aggregates = tt.aggregates
+			rxl, err := ConnectReduxAssets(os.TempDir(), fabric, tt.assets...)
+			testo.Error(t, err, tt.connectionErr)
+			testo.Nil(t, rxl, false)
+			for _, a := range tt.assets {
+				testo.Error(t, rxl.IsSupported(a), false)
+			}
+			testo.Error(t, reduxListCleanup(), false)
+		})
+	}
+
 }
 
 func TestReduxListKeys(t *testing.T) {
