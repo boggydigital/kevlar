@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var mockAggregates = reduxAggregates{
+var mockAggregates = ReduxAggregates{
 	"a1": {"v1", "v2", "v3"},
 	"a2": {"v4", "v5"},
 }

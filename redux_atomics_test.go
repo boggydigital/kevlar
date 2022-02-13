@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var mockAtomics = reduxAtomics{
+var mockAtomics = ReduxAtomics{
 	"k1": true,
 	"k2": true,
 }

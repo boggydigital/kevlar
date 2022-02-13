@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var mockTransitives = reduxTransitives{
+var mockTransitives = ReduxTransitives{
 	"from1": "to1",
 	"from2": "to2",
 }

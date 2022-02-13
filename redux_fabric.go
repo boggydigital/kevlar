@@ -1,9 +1,9 @@
 package kvas
 
 type ReduxFabric struct {
-	Aggregates  reduxAggregates
-	Transitives reduxTransitives
-	Atomics     reduxAtomics
+	Aggregates  ReduxAggregates
+	Transitives ReduxTransitives
+	Atomics     ReduxAtomics
 }
 
 func initFabric(rf *ReduxFabric) *ReduxFabric {
@@ -12,15 +12,15 @@ func initFabric(rf *ReduxFabric) *ReduxFabric {
 	}
 
 	if rf.Aggregates == nil {
-		rf.Aggregates = make(reduxAggregates)
+		rf.Aggregates = make(ReduxAggregates)
 	}
 
 	if rf.Transitives == nil {
-		rf.Transitives = make(reduxTransitives)
+		rf.Transitives = make(ReduxTransitives)
 	}
 
 	if rf.Atomics == nil {
-		rf.Atomics = make(reduxAtomics)
+		rf.Atomics = make(ReduxAtomics)
 	}
 
 	return rf
