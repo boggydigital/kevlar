@@ -144,37 +144,83 @@ func (rdx *redux) Match(terms []string, scope map[string]bool, anyCase bool, con
 		}
 	}
 
+	//matches := make(map[string]bool)
+	//for _, term := range terms {
+	//	if anyCase {
+	//		term = strings.ToLower(term)
+	//	}
+	//	for key := range scope {
+	//		if values, ok := rdx.GetAllValues(key); !ok {
+	//			continue
+	//		} else if anyValueMatchesTerm(term, values, anyCase, contains) {
+	//			matches[key] = true
+	//		}
+	//	}
+	//}
+
 	matches := make(map[string]bool)
-	for _, term := range terms {
-		if anyCase {
-			term = strings.ToLower(term)
-		}
-		for key := range scope {
-			if values, ok := rdx.GetAllValues(key); !ok {
-				continue
-			} else if anyValueMatchesTerm(term, values, anyCase, contains) {
-				matches[key] = true
-			}
+
+	for key := range scope {
+		if values, ok := rdx.GetAllValues(key); !ok {
+			continue
+		} else if someValuesMatchAllTerms(terms, values, anyCase, contains) {
+			matches[key] = true
 		}
 	}
 
 	return matches
 }
 
-func anyValueMatchesTerm(term string, values []string, anyCase bool, contains bool) bool {
+//func anyValueMatchesTerm(term string, values []string, anyCase bool, contains bool) bool {
+//	for _, val := range values {
+//		if anyCase {
+//			val = strings.ToLower(val)
+//		}
+//		if contains {
+//			if strings.Contains(val, term) {
+//				return true
+//			}
+//		} else {
+//			if val == term {
+//				return true
+//			}
+//		}
+//	}
+//	return false
+//}
+
+func someValuesMatchAllTerms(terms []string, values []string, anyCase bool, contains bool) bool {
+	termsMatches := make(map[string]bool)
+
+	for _, term := range terms {
+		if anyCase {
+			term = strings.ToLower(term)
+		}
+		termsMatches[term] = false
+	}
+
 	for _, val := range values {
 		if anyCase {
 			val = strings.ToLower(val)
 		}
-		if contains {
-			if strings.Contains(val, term) {
-				return true
-			}
-		} else {
-			if val == term {
-				return true
+		for term := range termsMatches {
+			if contains {
+				if strings.Contains(val, term) {
+					termsMatches[term] = true
+				}
+			} else {
+				if val == term {
+					termsMatches[term] = true
+				}
 			}
 		}
 	}
-	return false
+
+	for _, matches := range termsMatches {
+		if !matches {
+			return false
+		}
+	}
+
+	return true
 }
