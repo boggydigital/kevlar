@@ -134,6 +134,16 @@ func (rl *reduxList) GetAllValues(asset, key string) ([]string, bool) {
 	return rl.transitionValues(asset, values...), ok
 }
 
+func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
+	var err error
+	for asset := range rl.reductions {
+		if rl.reductions[asset], err = rl.reductions[asset].RefreshReduxValues(); err != nil {
+			return rl, err
+		}
+	}
+	return rl, nil
+}
+
 //appendReverseReplacedTerms adds reversed transitioned (original) terms
 //for a (transitioned) property.
 //Example: pr-id is transitive with pr-name: pr-id: "1", pr-name: "property_one"

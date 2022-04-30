@@ -17,9 +17,13 @@ type record struct {
 
 type index map[string]record
 
+func indexPath(dir string) string {
+	return filepath.Join(dir, indexFilename)
+}
+
 func (idx index) read(dir string) error {
 
-	indexPath := filepath.Join(dir, indexFilename)
+	indexPath := indexPath(dir)
 
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 		return nil
@@ -37,7 +41,7 @@ func (idx index) read(dir string) error {
 
 func (idx index) write(dir string) error {
 
-	indexPath := filepath.Join(dir, indexFilename)
+	indexPath := indexPath(dir)
 
 	indexFile, err := os.Create(indexPath)
 	if err != nil {

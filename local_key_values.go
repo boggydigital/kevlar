@@ -7,13 +7,15 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type localKeyValues struct {
-	dir string
-	ext string
-	idx index
-	mtx sync.Mutex
+	dir      string
+	ext      string
+	idx      index
+	mtx      sync.Mutex
+	connTime int64
 }
 
 const (
@@ -41,6 +43,9 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 		mtx: sync.Mutex{},
 	}
 	err := kv.idx.read(kv.dir)
+
+	kv.connTime = time.Now().Unix()
+
 	return kv, err
 }
 
@@ -59,11 +64,15 @@ func (lkv *localKeyValues) Get(key string) (io.ReadCloser, error) {
 		return nil, nil
 	}
 
-	valAbsPath := filepath.Join(lkv.dir, key+lkv.ext)
+	valAbsPath := lkv.valuePath(key)
 	if _, err := os.Stat(valAbsPath); os.IsNotExist(err) {
 		return nil, nil
 	}
 	return os.Open(valAbsPath)
+}
+
+func (lkv *localKeyValues) valuePath(key string) string {
+	return filepath.Join(lkv.dir, key+lkv.ext)
 }
 
 // Set stores a bytes slice value by a provided key
@@ -88,7 +97,7 @@ func (lkv *localKeyValues) Set(key string, reader io.Reader) error {
 	lkv.mtx.Unlock()
 
 	// write value
-	valuePath := filepath.Join(lkv.dir, key+lkv.ext)
+	valuePath := lkv.valuePath(key)
 
 	if _, err := os.Stat(lkv.dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(lkv.dir, dirPerm); err != nil {
@@ -121,7 +130,7 @@ func (lkv *localKeyValues) Cut(key string) (bool, error) {
 	}
 
 	// delete value
-	valuePath := filepath.Join(lkv.dir, key+lkv.ext)
+	valuePath := lkv.valuePath(key)
 	if _, err := os.Stat(valuePath); os.IsNotExist(err) {
 		return false, fmt.Errorf("index contains key %s, file not found", key)
 	}
@@ -156,4 +165,37 @@ func (lkv *localKeyValues) ModifiedAfter(timestamp int64, strictlyModified bool)
 
 func (lkv *localKeyValues) IsModifiedAfter(key string, timestamp int64) bool {
 	return lkv.idx.IsModifiedAfter(key, timestamp, lkv.mtx)
+}
+
+func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
+	indexPath := indexPath(lkv.dir)
+	if stat, err := os.Stat(indexPath); err != nil {
+		return -1, err
+	} else {
+		return stat.ModTime().Unix(), nil
+	}
+}
+
+func (lkv *localKeyValues) CurrentModTime(key string) (int64, error) {
+	valuePath := lkv.valuePath(key)
+	if stat, err := os.Stat(valuePath); err != nil {
+		return -1, err
+	} else {
+		return stat.ModTime().Unix(), nil
+	}
+}
+
+func (lkv *localKeyValues) IndexRefresh() error {
+	indexModTime, err := lkv.IndexCurrentModTime()
+	if err != nil {
+		return err
+	}
+
+	if lkv.connTime < indexModTime {
+		if err := lkv.idx.read(lkv.dir); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

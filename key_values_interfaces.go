@@ -37,7 +37,7 @@ type ModifiedAfterFilter interface {
 	ModifiedAfter(int64, bool) []string
 }
 
-type ModifiedAfterConfimer interface {
+type ModifiedAfterChecker interface {
 	IsModifiedAfter(string, int64) bool
 }
 
@@ -45,10 +45,29 @@ type KeyValuesFilter interface {
 	KeysEnumerator
 	CreatedAfterFilter
 	ModifiedAfterFilter
-	ModifiedAfterConfimer
+	ModifiedAfterChecker
+}
+
+type IndexModTimeGetter interface {
+	IndexCurrentModTime() (int64, error)
+}
+
+type ModTimeGetter interface {
+	CurrentModTime(key string) (int64, error)
+}
+
+type IndexRefresher interface {
+	IndexRefresh() error
+}
+
+type KeyValuesRefresher interface {
+	IndexModTimeGetter
+	ModTimeGetter
+	IndexRefresher
 }
 
 type KeyValues interface {
 	KeyValuesEditor
 	KeyValuesFilter
+	KeyValuesRefresher
 }

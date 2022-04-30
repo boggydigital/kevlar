@@ -1,9 +1,5 @@
 package kvas
 
-type ValuePresenceChecker interface {
-	HasVal(string, string) bool
-}
-
 type ValueAdder interface {
 	AddVal(string, string) error
 }
@@ -20,6 +16,17 @@ type ValueCutter interface {
 	CutVal(string, string) error
 }
 
+type ValueEditor interface {
+	ValueAdder
+	ValuesReplacer
+	BatchValuesReplacer
+	ValueCutter
+}
+
+type ValuePresenceChecker interface {
+	HasVal(string, string) bool
+}
+
 type AllValuesGetter interface {
 	GetAllValues(string) ([]string, bool)
 }
@@ -32,15 +39,21 @@ type TermsMatcher interface {
 	Match([]string, map[string]bool, bool, bool) map[string]bool
 }
 
-type ReduxValues interface {
+type ValueReader interface {
 	KeysEnumerator
 	PresenceChecker
 	ValuePresenceChecker
-	ValueAdder
-	ValuesReplacer
-	BatchValuesReplacer
-	ValueCutter
 	AllValuesGetter
 	FirstValueGetter
 	TermsMatcher
+}
+
+type ValueRefresher interface {
+	RefreshReduxValues() (ReduxValues, error)
+}
+
+type ReduxValues interface {
+	ValueEditor
+	ValueReader
+	ValueRefresher
 }

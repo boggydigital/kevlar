@@ -52,6 +52,10 @@ type QueryMatcher interface {
 	Match(map[string][]string, bool) map[string]bool
 }
 
+type AssetRefresher interface {
+	RefreshReduxAssets() (ReduxAssets, error)
+}
+
 type ReduxAssets interface {
 	AssetKeysEnumerator
 	AssetPresenceChecker
@@ -66,4 +70,5 @@ type ReduxAssets interface {
 	AssetFirstValueGetter
 	AssetsSupportChecker
 	QueryMatcher
+	AssetRefresher
 }

@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"encoding/gob"
 	"strings"
+	"time"
 )
 
 type redux struct {
+	kvr           KeyValuesRefresher
 	dir           string
 	asset         string
 	keyReductions map[string][]string
+	connTime      int64
 }
 
 func ConnectRedux(dir, asset string) (ReduxValues, error) {
@@ -26,6 +29,8 @@ func ConnectRedux(dir, asset string) (ReduxValues, error) {
 		return nil, err
 	}
 
+	ct := time.Now().Unix()
+
 	var keyReductions map[string][]string
 	if arc != nil {
 		if err := gob.NewDecoder(arc).Decode(&keyReductions); err != nil {
@@ -38,9 +43,11 @@ func ConnectRedux(dir, asset string) (ReduxValues, error) {
 	}
 
 	return &redux{
+		kvr:           rdx,
 		dir:           dir,
 		asset:         asset,
 		keyReductions: keyReductions,
+		connTime:      ct,
 	}, nil
 }
 
@@ -134,6 +141,23 @@ func (rdx *redux) GetAllValues(key string) ([]string, bool) {
 	}
 	val, ok := rdx.keyReductions[key]
 	return val, ok
+}
+
+func (rdx *redux) RefreshReduxValues() (ReduxValues, error) {
+	if err := rdx.kvr.IndexRefresh(); err != nil {
+		return rdx, err
+	}
+
+	rdxModTime, err := rdx.kvr.CurrentModTime(rdx.asset)
+	if err != nil {
+		return rdx, err
+	}
+
+	if rdx.connTime < rdxModTime {
+		return ConnectRedux(rdx.dir, rdx.asset)
+	}
+
+	return rdx, nil
 }
 
 func (rdx *redux) Match(terms []string, scope map[string]bool, anyCase bool, contains bool) map[string]bool {
