@@ -143,6 +143,10 @@ func (rdx *redux) GetAllValues(key string) ([]string, bool) {
 	return val, ok
 }
 
+func (rdx *redux) ReduxModTime() (int64, error) {
+	return rdx.kvr.CurrentModTime(rdx.asset)
+}
+
 func (rdx *redux) RefreshReduxValues() (ReduxValues, error) {
 	if err := rdx.kvr.IndexRefresh(); err != nil {
 		return rdx, err

@@ -144,6 +144,20 @@ func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
 	return rl, nil
 }
 
+func (rl *reduxList) ReduxAssetsModTime() (int64, error) {
+	mt := int64(0)
+	for _, rdx := range rl.reductions {
+		if rmt, err := rdx.ReduxModTime(); err != nil {
+			return mt, err
+		} else {
+			if mt < rmt {
+				mt = rmt
+			}
+		}
+	}
+	return mt, nil
+}
+
 //appendReverseReplacedTerms adds reversed transitioned (original) terms
 //for a (transitioned) property.
 //Example: pr-id is transitive with pr-name: pr-id: "1", pr-name: "property_one"

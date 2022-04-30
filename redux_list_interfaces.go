@@ -52,8 +52,12 @@ type QueryMatcher interface {
 	Match(map[string][]string, bool) map[string]bool
 }
 
-type AssetRefresher interface {
+type AssetsRefresher interface {
 	RefreshReduxAssets() (ReduxAssets, error)
+}
+
+type AssetsModTimeGetter interface {
+	ReduxAssetsModTime() (int64, error)
 }
 
 type ReduxAssets interface {
@@ -70,5 +74,6 @@ type ReduxAssets interface {
 	AssetFirstValueGetter
 	AssetsSupportChecker
 	QueryMatcher
-	AssetRefresher
+	AssetsRefresher
+	AssetsModTimeGetter
 }

@@ -48,12 +48,17 @@ type ValueReader interface {
 	TermsMatcher
 }
 
-type ValueRefresher interface {
+type ReduxRefresher interface {
 	RefreshReduxValues() (ReduxValues, error)
+}
+
+type ReduxModTimeGetter interface {
+	ReduxModTime() (int64, error)
 }
 
 type ReduxValues interface {
 	ValueEditor
 	ValueReader
-	ValueRefresher
+	ReduxRefresher
+	ReduxModTimeGetter
 }
