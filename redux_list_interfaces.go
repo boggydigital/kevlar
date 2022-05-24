@@ -1,55 +1,55 @@
 package kvas
 
 type AssetKeysEnumerator interface {
-	Keys(string) []string
+	Keys(asset string) []string
 }
 
 type AssetPresenceChecker interface {
-	Has(string) bool
+	Has(asset string) bool
 }
 
 type AssetKeyPresenceChecker interface {
-	HasKey(string, string) bool
+	HasKey(asset, key string) bool
 }
 
 type AssetValuePresenceChecker interface {
-	HasVal(string, string, string) bool
+	HasVal(asset, key, val string) bool
 }
 
 type AssetValueAdder interface {
-	AddVal(string, string, string) error
+	AddVal(asset, key, val string) error
 }
 
 type AssetValuesReplacer interface {
-	ReplaceValues(string, string, ...string) error
+	ReplaceValues(asset, key string, values ...string) error
 }
 
 type AssetBatchValuesReplacer interface {
-	BatchReplaceValues(string, map[string][]string) error
+	BatchReplaceValues(asset string, keyValues map[string][]string) error
 }
 
 type AssetValueCutter interface {
-	CutVal(string, string, string) error
+	CutVal(asset, key, val string) error
 }
 
 type AssetAllValuesGetter interface {
-	GetAllValues(string, string) ([]string, bool)
+	GetAllValues(asset, key string) ([]string, bool)
 }
 
 type AssetAllUnchangedValuesGetter interface {
-	GetAllUnchangedValues(string, string) ([]string, bool)
+	GetAllUnchangedValues(asset, key string) ([]string, bool)
 }
 
 type AssetFirstValueGetter interface {
-	GetFirstVal(string, string) (string, bool)
+	GetFirstVal(asset, key string) (string, bool)
 }
 
 type AssetsSupportChecker interface {
-	IsSupported(...string) error
+	IsSupported(assets ...string) error
 }
 
 type QueryMatcher interface {
-	Match(map[string][]string, bool) map[string]bool
+	Match(query map[string][]string, anyCase bool) map[string]bool
 }
 
 type AssetsRefresher interface {

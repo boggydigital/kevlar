@@ -169,7 +169,9 @@ func (lkv *localKeyValues) IsModifiedAfter(key string, timestamp int64) bool {
 
 func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
 	indexPath := indexPath(lkv.dir)
-	if stat, err := os.Stat(indexPath); err != nil {
+	if stat, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return -1, nil
+	} else if err != nil {
 		return -1, err
 	} else {
 		return stat.ModTime().Unix(), nil
@@ -178,7 +180,9 @@ func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
 
 func (lkv *localKeyValues) CurrentModTime(key string) (int64, error) {
 	valuePath := lkv.valuePath(key)
-	if stat, err := os.Stat(valuePath); err != nil {
+	if stat, err := os.Stat(valuePath); os.IsNotExist(err) {
+		return -1, nil
+	} else if err != nil {
 		return -1, err
 	} else {
 		return stat.ModTime().Unix(), nil

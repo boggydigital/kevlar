@@ -1,19 +1,19 @@
 package kvas
 
 type ValueAdder interface {
-	AddVal(string, string) error
+	AddVal(key string, val string) error
 }
 
 type ValuesReplacer interface {
-	ReplaceValues(string, ...string) error
+	ReplaceValues(key string, values ...string) error
 }
 
 type BatchValuesReplacer interface {
-	BatchReplaceValues(map[string][]string) error
+	BatchReplaceValues(keysValues map[string][]string) error
 }
 
 type ValueCutter interface {
-	CutVal(string, string) error
+	CutVal(key string, val string) error
 }
 
 type ValueEditor interface {
@@ -24,19 +24,19 @@ type ValueEditor interface {
 }
 
 type ValuePresenceChecker interface {
-	HasVal(string, string) bool
+	HasVal(key string, val string) bool
 }
 
 type AllValuesGetter interface {
-	GetAllValues(string) ([]string, bool)
+	GetAllValues(key string) ([]string, bool)
 }
 
 type FirstValueGetter interface {
-	GetFirstVal(string) (string, bool)
+	GetFirstVal(key string) (string, bool)
 }
 
 type TermsMatcher interface {
-	Match([]string, map[string]bool, bool, bool) map[string]bool
+	Match(terms []string, scope map[string]bool, anyCase bool, contains bool) map[string]bool
 }
 
 type ValueReader interface {

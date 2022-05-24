@@ -3,19 +3,19 @@ package kvas
 import "io"
 
 type PresenceChecker interface {
-	Has(string) bool
+	Has(key string) bool
 }
 
 type Getter interface {
-	Get(string) (io.ReadCloser, error)
+	Get(key string) (io.ReadCloser, error)
 }
 
 type Setter interface {
-	Set(string, io.Reader) error
+	Set(key string, data io.Reader) error
 }
 
 type Cutter interface {
-	Cut(string) (bool, error)
+	Cut(key string) (bool, error)
 }
 
 type KeyValuesEditor interface {
@@ -30,15 +30,15 @@ type KeysEnumerator interface {
 }
 
 type CreatedAfterFilter interface {
-	CreatedAfter(int64) []string
+	CreatedAfter(timestamp int64) []string
 }
 
 type ModifiedAfterFilter interface {
-	ModifiedAfter(int64, bool) []string
+	ModifiedAfter(timestamp int64, strictlyModified bool) []string
 }
 
 type ModifiedAfterChecker interface {
-	IsModifiedAfter(string, int64) bool
+	IsModifiedAfter(key string, timestamp int64) bool
 }
 
 type KeyValuesFilter interface {
