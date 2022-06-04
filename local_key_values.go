@@ -148,33 +148,21 @@ func (lkv *localKeyValues) Cut(key string) (bool, error) {
 }
 
 func (lkv *localKeyValues) Keys() []string {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
 	return lkv.idx.Keys(lkv.mtx)
 }
 
 // CreatedAfter returns keys of values created on or after provided timestamp
 func (lkv *localKeyValues) CreatedAfter(timestamp int64) []string {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
 	return lkv.idx.CreatedAfter(timestamp, lkv.mtx)
 }
 
 // ModifiedAfter returns keys of values modified on or after provided timestamp
 // that were created earlier
 func (lkv *localKeyValues) ModifiedAfter(timestamp int64, strictlyModified bool) []string {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
 	return lkv.idx.ModifiedAfter(timestamp, strictlyModified, lkv.mtx)
 }
 
 func (lkv *localKeyValues) IsModifiedAfter(key string, timestamp int64) bool {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
 	return lkv.idx.IsModifiedAfter(key, timestamp, lkv.mtx)
 }
 
