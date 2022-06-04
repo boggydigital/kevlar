@@ -64,6 +64,9 @@ func (lkv *localKeyValues) Get(key string) (io.ReadCloser, error) {
 		return nil, nil
 	}
 
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	valAbsPath := lkv.valuePath(key)
 	if _, err := os.Stat(valAbsPath); os.IsNotExist(err) {
 		return nil, nil
@@ -149,25 +152,40 @@ func (lkv *localKeyValues) Cut(key string) (bool, error) {
 }
 
 func (lkv *localKeyValues) Keys() []string {
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	return lkv.idx.Keys(lkv.mtx)
 }
 
 // CreatedAfter returns keys of values created on or after provided timestamp
 func (lkv *localKeyValues) CreatedAfter(timestamp int64) []string {
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	return lkv.idx.CreatedAfter(timestamp, lkv.mtx)
 }
 
 // ModifiedAfter returns keys of values modified on or after provided timestamp
 // that were created earlier
 func (lkv *localKeyValues) ModifiedAfter(timestamp int64, strictlyModified bool) []string {
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	return lkv.idx.ModifiedAfter(timestamp, strictlyModified, lkv.mtx)
 }
 
 func (lkv *localKeyValues) IsModifiedAfter(key string, timestamp int64) bool {
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	return lkv.idx.IsModifiedAfter(key, timestamp, lkv.mtx)
 }
 
 func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	indexPath := indexPath(lkv.dir)
 	if stat, err := os.Stat(indexPath); os.IsNotExist(err) {
 		return -1, nil
@@ -179,6 +197,9 @@ func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
 }
 
 func (lkv *localKeyValues) CurrentModTime(key string) (int64, error) {
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
+
 	valuePath := lkv.valuePath(key)
 	if stat, err := os.Stat(valuePath); os.IsNotExist(err) {
 		return -1, nil
@@ -194,6 +215,9 @@ func (lkv *localKeyValues) IndexRefresh() error {
 	if err != nil {
 		return err
 	}
+
+	lkv.mtx.Lock()
+	defer lkv.mtx.Unlock()
 
 	if lkv.connTime < indexModTime {
 		if err := lkv.idx.read(lkv.dir); err != nil {
