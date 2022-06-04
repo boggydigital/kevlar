@@ -59,13 +59,9 @@ func (lkv *localKeyValues) Has(key string) bool {
 }
 
 func (lkv *localKeyValues) Get(key string) (io.ReadCloser, error) {
-
 	if !lkv.Has(key) {
 		return nil, nil
 	}
-
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
 
 	valAbsPath := lkv.valuePath(key)
 	if _, err := os.Stat(valAbsPath); os.IsNotExist(err) {
@@ -183,9 +179,6 @@ func (lkv *localKeyValues) IsModifiedAfter(key string, timestamp int64) bool {
 }
 
 func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
 	indexPath := indexPath(lkv.dir)
 	if stat, err := os.Stat(indexPath); os.IsNotExist(err) {
 		return -1, nil
@@ -197,9 +190,6 @@ func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
 }
 
 func (lkv *localKeyValues) CurrentModTime(key string) (int64, error) {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
 	valuePath := lkv.valuePath(key)
 	if stat, err := os.Stat(valuePath); os.IsNotExist(err) {
 		return -1, nil
