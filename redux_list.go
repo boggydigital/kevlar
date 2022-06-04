@@ -2,11 +2,13 @@ package kvas
 
 import (
 	"fmt"
+	"sync"
 )
 
 type reduxList struct {
 	reductions map[string]ReduxValues
 	fabric     *ReduxFabric
+	mtx        *sync.Mutex
 }
 
 func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (ReduxAssets, error) {
@@ -35,6 +37,7 @@ func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (Redu
 	return &reduxList{
 		reductions: reductions,
 		fabric:     fabric,
+		mtx:        &sync.Mutex{},
 	}, nil
 }
 
@@ -135,6 +138,9 @@ func (rl *reduxList) GetAllValues(asset, key string) ([]string, bool) {
 }
 
 func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
+	rl.mtx.Lock()
+	defer rl.mtx.Unlock()
+
 	var err error
 	for asset := range rl.reductions {
 		if rl.reductions[asset], err = rl.reductions[asset].RefreshReduxValues(); err != nil {
