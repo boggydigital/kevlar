@@ -151,6 +151,9 @@ func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
 }
 
 func (rl *reduxList) ReduxAssetsModTime() (int64, error) {
+	rl.mtx.Lock()
+	defer rl.mtx.Unlock()
+
 	mt := int64(0)
 	for _, rdx := range rl.reductions {
 		if rmt, err := rdx.ReduxModTime(); err != nil {
