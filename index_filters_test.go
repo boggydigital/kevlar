@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-var mtx = sync.Mutex{}
+var tmtx = sync.Mutex{}
 
 func TestIndexKeys(t *testing.T) {
 	idx := mockIndex()
-	keys := idx.Keys(mtx)
+	keys := idx.Keys(tmtx)
 	testo.EqualValues(t, len(keys), len(idx))
 	for _, k := range keys {
 		_, ok := idx[k]
@@ -37,7 +37,7 @@ func TestIndexCreatedAfter(t *testing.T) {
 				idx.upd(n, n)
 			}
 
-			res := idx.CreatedAfter(start, mtx)
+			res := idx.CreatedAfter(start, tmtx)
 			testo.EqualValues(t, len(res), len(tt.new))
 			for _, r := range res {
 				_, ok := tt.new[r]
@@ -72,14 +72,14 @@ func TestIndexModifiedAfter(t *testing.T) {
 				idx.upd(key, "new"+key)
 			}
 
-			idxModCre := idx.ModifiedAfter(start, false, mtx)
+			idxModCre := idx.ModifiedAfter(start, false, tmtx)
 			testo.EqualValues(t, len(idxModCre), len(modCre))
 			for _, k := range idxModCre {
 				_, ok := modCre[k]
 				testo.EqualValues(t, ok, true)
 			}
 
-			idxModOnly := idx.ModifiedAfter(start, true, mtx)
+			idxModOnly := idx.ModifiedAfter(start, true, tmtx)
 			for _, k := range idxModOnly {
 				_, ok := modOnly[k]
 				testo.EqualValues(t, ok, true)
@@ -121,7 +121,7 @@ func TestIndexIsModifiedAfter(t *testing.T) {
 				idx.upd(k, "new"+k)
 			}
 
-			ok := idx.IsModifiedAfter(tt.key, start, mtx)
+			ok := idx.IsModifiedAfter(tt.key, start, tmtx)
 			testo.EqualValues(t, ok, tt.exp)
 
 		})
