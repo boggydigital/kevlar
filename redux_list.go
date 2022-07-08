@@ -8,10 +8,18 @@ import (
 type reduxList struct {
 	reductions map[string]ReduxValues
 	fabric     *ReduxFabric
-	mtx        *sync.Mutex
 }
 
+var (
+	once = sync.Once{}
+	mtx  = &sync.Mutex{}
+)
+
 func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (ReduxAssets, error) {
+
+	mtx.Lock()
+	defer mtx.Unlock()
+
 	reductions := make(map[string]ReduxValues)
 	var err error
 
@@ -35,9 +43,8 @@ func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (Redu
 	}
 
 	return &reduxList{
-		reductions: reductions,
 		fabric:     fabric,
-		mtx:        &sync.Mutex{},
+		reductions: reductions,
 	}, nil
 }
 
@@ -138,8 +145,8 @@ func (rl *reduxList) GetAllValues(asset, key string) ([]string, bool) {
 }
 
 func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
-	rl.mtx.Lock()
-	defer rl.mtx.Unlock()
+	mtx.Lock()
+	defer mtx.Unlock()
 
 	var err error
 	for asset := range rl.reductions {
@@ -151,8 +158,8 @@ func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
 }
 
 func (rl *reduxList) ReduxAssetsModTime() (int64, error) {
-	rl.mtx.Lock()
-	defer rl.mtx.Unlock()
+	mtx.Lock()
+	defer mtx.Unlock()
 
 	mt := int64(0)
 	for _, rdx := range rl.reductions {
