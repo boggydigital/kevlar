@@ -8,17 +8,11 @@ import (
 type reduxList struct {
 	reductions map[string]ReduxValues
 	fabric     *ReduxFabric
+	mtx        *sync.Mutex
+	modTime    int64
 }
 
-var (
-	once = sync.Once{}
-	mtx  = &sync.Mutex{}
-)
-
 func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (ReduxAssets, error) {
-
-	mtx.Lock()
-	defer mtx.Unlock()
 
 	reductions := make(map[string]ReduxValues)
 	var err error
@@ -43,8 +37,10 @@ func ConnectReduxAssets(dir string, fabric *ReduxFabric, assets ...string) (Redu
 	}
 
 	return &reduxList{
+		mtx:        &sync.Mutex{},
 		fabric:     fabric,
 		reductions: reductions,
+		modTime:    -1,
 	}, nil
 }
 
@@ -145,21 +141,30 @@ func (rl *reduxList) GetAllValues(asset, key string) ([]string, bool) {
 }
 
 func (rl *reduxList) RefreshReduxAssets() (ReduxAssets, error) {
-	mtx.Lock()
-	defer mtx.Unlock()
 
-	var err error
+	modTime, err := rl.ReduxAssetsModTime()
+	if err != nil {
+		return rl, err
+	}
+
+	if rl.modTime >= modTime {
+		return rl, nil
+	}
+
 	for asset := range rl.reductions {
 		if rl.reductions[asset], err = rl.reductions[asset].RefreshReduxValues(); err != nil {
 			return rl, err
 		}
 	}
+
+	rl.modTime = modTime
+
 	return rl, nil
 }
 
 func (rl *reduxList) ReduxAssetsModTime() (int64, error) {
-	mtx.Lock()
-	defer mtx.Unlock()
+	rl.mtx.Lock()
+	defer rl.mtx.Unlock()
 
 	mt := int64(0)
 	for _, rdx := range rl.reductions {
