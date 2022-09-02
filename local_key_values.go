@@ -21,6 +21,7 @@ type localKeyValues struct {
 const (
 	JsonExt = ".json"
 	GobExt  = ".gob"
+	HtmlExt = ".html"
 )
 
 const dirPerm os.FileMode = 0755
@@ -31,6 +32,8 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 	case JsonExt:
 		fallthrough
 	case GobExt:
+		fallthrough
+	case HtmlExt:
 		//do nothing
 	default:
 		return nil, fmt.Errorf("unknown extension %s", ext)
