@@ -2,6 +2,7 @@ package kvas
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -179,14 +180,14 @@ func (rl *reduxList) ReduxAssetsModTime() (int64, error) {
 	return mt, nil
 }
 
-//appendReverseReplacedTerms adds reversed transitioned (original) terms
-//for a (transitioned) property.
-//Example: pr-id is transitive with pr-name: pr-id: "1", pr-name: "property_one"
-//would result in pr-id value displayed in "property_one (1)".
-//Matching example: for a query {pr-id: {"property_one"}}, appendReverseReplacedTerms
-//would transform that to {pr-id: {"property_one", "1"}} and objects that have
-//pr-id:"1" would match.
-//Note: reverse transitions automatically take atomicity into account.
+// appendReverseReplacedTerms adds reversed transitioned (original) terms
+// for a (transitioned) property.
+// Example: pr-id is transitive with pr-name: pr-id: "1", pr-name: "property_one"
+// would result in pr-id value displayed in "property_one (1)".
+// Matching example: for a query {pr-id: {"property_one"}}, appendReverseReplacedTerms
+// would transform that to {pr-id: {"property_one", "1"}} and objects that have
+// pr-id:"1" would match.
+// Note: reverse transitions automatically take atomicity into account.
 func (rl *reduxList) appendReverseTransitions(asset string, terms []string, anyCase bool) []string {
 	if rl.fabric.Transitives.IsTransitive(asset) {
 		rp := rl.fabric.Transitives.Transition(asset)
@@ -199,7 +200,7 @@ func (rl *reduxList) appendReverseTransitions(asset string, terms []string, anyC
 	return terms
 }
 
-//matchDetailed
+// matchDetailed
 func (rl *reduxList) matchDetailed(asset string, scope map[string]bool, terms []string, anyCase bool) map[string]bool {
 	details := rl.fabric.Aggregates.Detail(asset)
 	matches := make(map[string]bool, 0)
@@ -241,4 +242,55 @@ func (rl *reduxList) IsSupported(assets ...string) error {
 	}
 
 	return nil
+}
+
+type idPropertyTitle struct {
+	id       string
+	property string
+}
+
+type sortableIdSet struct {
+	ipt []idPropertyTitle
+}
+
+func (is *sortableIdSet) Len() int {
+	return len(is.ipt)
+}
+
+func (is *sortableIdSet) Swap(i, j int) {
+	is.ipt[i], is.ipt[j] = is.ipt[j], is.ipt[i]
+}
+
+func (is *sortableIdSet) Less(i, j int) bool {
+	return is.ipt[i].property < is.ipt[j].property
+}
+
+func (rl *reduxList) Sort(ids []string, sortBy string, desc bool) ([]string, error) {
+	if err := rl.IsSupported(sortBy); err != nil {
+		return nil, err
+	}
+
+	sis := &sortableIdSet{
+		ipt: make([]idPropertyTitle, 0, len(ids)),
+	}
+
+	for _, id := range ids {
+		ipt := idPropertyTitle{id: id}
+		ipt.property, _ = rl.GetFirstVal(sortBy, id)
+		sis.ipt = append(sis.ipt, ipt)
+	}
+
+	var sortInterface sort.Interface = sis
+	if desc {
+		sortInterface = sort.Reverse(sortInterface)
+	}
+
+	sort.Sort(sortInterface)
+
+	sorted := make([]string, 0, len(sis.ipt))
+	for _, ipt := range sis.ipt {
+		sorted = append(sorted, ipt.id)
+	}
+
+	return sorted, nil
 }

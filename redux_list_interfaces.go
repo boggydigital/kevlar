@@ -60,6 +60,10 @@ type AssetsModTimeGetter interface {
 	ReduxAssetsModTime() (int64, error)
 }
 
+type AssetsSorter interface {
+	Sort(ids []string, property string, desc bool) ([]string, error)
+}
+
 type ReduxAssets interface {
 	AssetKeysEnumerator
 	AssetPresenceChecker
@@ -76,4 +80,5 @@ type ReduxAssets interface {
 	QueryMatcher
 	AssetsRefresher
 	AssetsModTimeGetter
+	AssetsSorter
 }
