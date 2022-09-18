@@ -223,6 +223,9 @@ func (rl *reduxList) Match(query map[string][]string, anyCase bool) map[string]b
 		if rl.fabric.Aggregates.IsAggregate(asset) {
 			matches = rl.matchDetailed(asset, matches, terms, anyCase)
 		} else {
+			if _, ok := rl.reductions[asset]; !ok {
+				continue
+			}
 			atomic := rl.fabric.Atomics.IsAtomic(asset)
 			matches = rl.reductions[asset].Match(
 				rl.appendReverseTransitions(asset, terms, anyCase),
