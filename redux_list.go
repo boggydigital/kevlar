@@ -282,13 +282,13 @@ func (rl *reduxList) Sort(ids []string, desc bool, sortBy ...string) ([]string, 
 		ipt: make([]idPropertiesTitle, 0, len(ids)),
 	}
 
-	for _, p := range sortBy {
-		for _, id := range ids {
-			ipt := idPropertiesTitle{id: id}
+	for _, id := range ids {
+		ipt := idPropertiesTitle{id: id}
+		for _, p := range sortBy {
 			v, _ := rl.GetFirstVal(p, id)
 			ipt.properties = append(ipt.properties, v)
-			sis.ipt = append(sis.ipt, ipt)
 		}
+		sis.ipt = append(sis.ipt, ipt)
 	}
 
 	var sortInterface sort.Interface = sis
