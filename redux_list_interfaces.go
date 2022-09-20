@@ -61,7 +61,7 @@ type AssetsModTimeGetter interface {
 }
 
 type AssetsSorter interface {
-	Sort(ids []string, property string, desc bool) ([]string, error)
+	Sort(ids []string, desc bool, sortBy ...string) ([]string, error)
 }
 
 type ReduxAssets interface {
