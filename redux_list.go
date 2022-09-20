@@ -247,28 +247,30 @@ func (rl *reduxList) IsSupported(assets ...string) error {
 	return nil
 }
 
-type idPropertiesTitle struct {
-	id         string
-	properties []string
+type idValues struct {
+	id     string
+	values []string
 }
 
 type sortableIdSet struct {
-	ipt []idPropertiesTitle
+	properties []string
+	ipv        []idValues
 }
 
 func (is *sortableIdSet) Len() int {
-	return len(is.ipt)
+	return len(is.ipv)
 }
 
 func (is *sortableIdSet) Swap(i, j int) {
-	is.ipt[i], is.ipt[j] = is.ipt[j], is.ipt[i]
+	is.ipv[i], is.ipv[j] = is.ipv[j], is.ipv[i]
 }
 
 func (is *sortableIdSet) Less(i, j int) bool {
-	for p, _ := range is.ipt[i].properties {
-		if is.ipt[i].properties[p] < is.ipt[j].properties[p] {
-			return true
+	for p, _ := range is.properties {
+		if is.ipv[i].values[p] == is.ipv[j].values[p] {
+			continue
 		}
+		return is.ipv[i].values[p] < is.ipv[j].values[p]
 	}
 	return false
 }
@@ -279,16 +281,17 @@ func (rl *reduxList) Sort(ids []string, desc bool, sortBy ...string) ([]string, 
 	}
 
 	sis := &sortableIdSet{
-		ipt: make([]idPropertiesTitle, 0, len(ids)),
+		properties: sortBy,
+		ipv:        make([]idValues, 0, len(ids)),
 	}
 
 	for _, id := range ids {
-		ipt := idPropertiesTitle{id: id}
+		iv := idValues{id: id}
 		for _, p := range sortBy {
 			v, _ := rl.GetFirstVal(p, id)
-			ipt.properties = append(ipt.properties, v)
+			iv.values = append(iv.values, v)
 		}
-		sis.ipt = append(sis.ipt, ipt)
+		sis.ipv = append(sis.ipv, iv)
 	}
 
 	var sortInterface sort.Interface = sis
@@ -298,9 +301,9 @@ func (rl *reduxList) Sort(ids []string, desc bool, sortBy ...string) ([]string, 
 
 	sort.Sort(sortInterface)
 
-	sorted := make([]string, 0, len(sis.ipt))
-	for _, ipt := range sis.ipt {
-		sorted = append(sorted, ipt.id)
+	sorted := make([]string, 0, len(sis.ipv))
+	for _, iv := range sis.ipv {
+		sorted = append(sorted, iv.id)
 	}
 
 	return sorted, nil
