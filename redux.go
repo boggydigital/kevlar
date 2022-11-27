@@ -3,6 +3,7 @@ package kvas
 import (
 	"bytes"
 	"encoding/gob"
+	"io"
 	"strings"
 	"time"
 )
@@ -33,7 +34,9 @@ func ConnectRedux(dir, asset string) (ReduxValues, error) {
 
 	var keyReductions map[string][]string
 	if arc != nil {
-		if err := gob.NewDecoder(arc).Decode(&keyReductions); err != nil {
+		if err := gob.NewDecoder(arc).Decode(&keyReductions); err == io.EOF {
+			// empty reduction - do nothing, it'll be initialized below
+		} else if err != nil {
 			return nil, err
 		}
 	}
