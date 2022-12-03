@@ -1,5 +1,7 @@
 package kvas
 
+import "io"
+
 type AssetKeysEnumerator interface {
 	Keys(asset string) []string
 }
@@ -64,6 +66,10 @@ type AssetsSorter interface {
 	Sort(ids []string, desc bool, sortBy ...string) ([]string, error)
 }
 
+type AssetsExporter interface {
+	Export(w io.Writer, ids ...string) error
+}
+
 type ReduxAssets interface {
 	AssetKeysEnumerator
 	AssetPresenceChecker
@@ -81,4 +87,5 @@ type ReduxAssets interface {
 	AssetsRefresher
 	AssetsModTimeGetter
 	AssetsSorter
+	AssetsExporter
 }

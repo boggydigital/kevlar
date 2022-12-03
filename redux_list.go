@@ -2,6 +2,8 @@ package kvas
 
 import (
 	"fmt"
+	"github.com/boggydigital/wits"
+	"io"
 	"sort"
 	"sync"
 )
@@ -308,3 +310,23 @@ func (rl *reduxList) Sort(ids []string, desc bool, sortBy ...string) ([]string, 
 
 	return sorted, nil
 }
+
+func (rl *reduxList) Export(w io.Writer, ids ...string) error {
+
+	skv := make(wits.SectionKeyValues)
+
+	for _, id := range ids {
+		skv[id] = make(wits.KeyValues)
+		for p := range rl.reductions {
+			if vals, ok := rl.GetAllUnchangedValues(p, id); ok {
+				skv[id][p] = vals
+			}
+		}
+	}
+
+	return skv.Write(w)
+}
+
+//func (rl *reduxList) Import(skv wits.SectionKeyValues) (map[string]bool, error) {
+//
+//}
