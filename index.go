@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -36,7 +37,38 @@ func (idx index) read(dir string) error {
 	}
 	defer indexFile.Close()
 
-	return gob.NewDecoder(indexFile).Decode(&idx)
+	if err := gob.NewDecoder(indexFile).Decode(&idx); err != nil {
+		// attempt to gracefully recover index from the filesystem state
+		//idx = make(index)
+
+		di, err := os.Open(dir)
+		if err != nil {
+			return err
+		}
+
+		files, err := di.Readdir(-1)
+		if err != nil {
+			return err
+		}
+
+		idx = make(index)
+
+		for _, fi := range files {
+			fn := fi.Name()
+			if fn == indexFilename {
+				continue
+			}
+
+			fn = strings.TrimSuffix(fn, filepath.Ext(fn))
+
+			idx[fn] = record{
+				Created:  fi.ModTime().Unix(),
+				Modified: fi.ModTime().Unix(),
+			}
+		}
+	}
+
+	return nil
 }
 
 func (idx index) write(dir string) error {
