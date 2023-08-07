@@ -38,10 +38,6 @@ type AssetAllValuesGetter interface {
 	GetAllValues(asset, key string) ([]string, bool)
 }
 
-type AssetAllUnchangedValuesGetter interface {
-	GetAllUnchangedValues(asset, key string) ([]string, bool)
-}
-
 type AssetFirstValueGetter interface {
 	GetFirstVal(asset, key string) (string, bool)
 }
@@ -51,7 +47,7 @@ type AssetsSupportChecker interface {
 }
 
 type QueryMatcher interface {
-	Match(query map[string][]string, anyCase bool) map[string]bool
+	Match(query map[string][]string, anyCase, contains bool) map[string]bool
 }
 
 type AssetsRefresher interface {
@@ -80,7 +76,6 @@ type ReduxAssets interface {
 	AssetBatchValuesReplacer
 	AssetValueCutter
 	AssetAllValuesGetter
-	AssetAllUnchangedValuesGetter
 	AssetFirstValueGetter
 	AssetsSupportChecker
 	QueryMatcher
