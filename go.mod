@@ -1,7 +1,9 @@
 module github.com/boggydigital/kvas
 
-go 1.17
+go 1.21
 
-require github.com/boggydigital/testo v0.1.7
-
-require github.com/boggydigital/wits v0.2.3 // indirect
+require (
+	github.com/boggydigital/testo v0.1.7
+	github.com/boggydigital/wits v0.2.3
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+)
