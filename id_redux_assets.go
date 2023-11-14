@@ -69,7 +69,7 @@ func (irap *IRAProxy) HasVal(asset, key, val string) bool {
 	return false
 }
 
-func (irap *IRAProxy) AddVal(asset, key, val string) error {
+func (irap *IRAProxy) AddValues(asset, key string, values ...string) error {
 	return IRAProxyReadOnlyError
 }
 

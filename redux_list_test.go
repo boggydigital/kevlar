@@ -146,7 +146,7 @@ func TestReduxListAddVal(t *testing.T) {
 		t.Run(tt.val, func(t *testing.T) {
 			rxl := mockReduxList()
 			testo.EqualValues(t, rxl.HasVal(tt.asset, tt.key, tt.val), tt.has)
-			testo.Error(t, rxl.AddVal(tt.asset, tt.key, tt.val), tt.expErr)
+			testo.Error(t, rxl.AddValues(tt.asset, tt.key, tt.val), tt.expErr)
 			if !tt.expErr {
 				testo.EqualValues(t, rxl.HasVal(tt.asset, tt.key, tt.val), true)
 			}

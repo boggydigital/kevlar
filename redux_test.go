@@ -134,7 +134,7 @@ func TestReduxAddVal(t *testing.T) {
 		t.Run(tt.key+tt.val, func(t *testing.T) {
 			rdx := mockRedux()
 			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), tt.exist)
-			testo.Error(t, rdx.AddVal(tt.key, tt.val), false)
+			testo.Error(t, rdx.AddValues(tt.key, tt.val), false)
 			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), true)
 			testo.Error(t, reduxCleanup(testAsset), false)
 		})

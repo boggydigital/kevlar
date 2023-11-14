@@ -76,11 +76,14 @@ func (rdx *redux) HasVal(key string, val string) bool {
 	return false
 }
 
-func (rdx *redux) AddVal(key string, val string) error {
-	if rdx.HasVal(key, val) {
-		return nil
+func (rdx *redux) AddValues(key string, values ...string) error {
+	newValues := make([]string, 0, len(values))
+	for _, val := range values {
+		if !rdx.HasVal(key, val) {
+			newValues = append(newValues, val)
+		}
 	}
-	rdx.keyReductions[key] = append(rdx.keyReductions[key], val)
+	rdx.keyReductions[key] = append(rdx.keyReductions[key], newValues...)
 	return rdx.write()
 }
 

@@ -59,11 +59,11 @@ func (rl *reduxList) HasVal(asset, key, val string) bool {
 	return rl.reductions[asset].HasVal(key, val)
 }
 
-func (rl *reduxList) AddVal(asset, key, val string) error {
+func (rl *reduxList) AddValues(asset, key string, values ...string) error {
 	if !rl.Has(asset) {
 		return fmt.Errorf("asset %s is not present in this list", asset)
 	}
-	return rl.reductions[asset].AddVal(key, val)
+	return rl.reductions[asset].AddValues(key, values...)
 }
 
 func (rl *reduxList) ReplaceValues(asset, key string, values ...string) error {

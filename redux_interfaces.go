@@ -1,7 +1,7 @@
 package kvas
 
-type ValueAdder interface {
-	AddVal(key string, val string) error
+type ValuesAdder interface {
+	AddValues(key string, values ...string) error
 }
 
 type ValuesReplacer interface {
@@ -17,7 +17,7 @@ type ValueCutter interface {
 }
 
 type ValueEditor interface {
-	ValueAdder
+	ValuesAdder
 	ValuesReplacer
 	BatchValuesReplacer
 	ValueCutter

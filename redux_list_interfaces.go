@@ -18,8 +18,8 @@ type AssetValuePresenceChecker interface {
 	HasVal(asset, key, val string) bool
 }
 
-type AssetValueAdder interface {
-	AddVal(asset, key, val string) error
+type AssetValuesAdder interface {
+	AddValues(asset, key string, values ...string) error
 }
 
 type AssetValuesReplacer interface {
@@ -71,7 +71,7 @@ type ReduxAssets interface {
 	AssetPresenceChecker
 	AssetKeyPresenceChecker
 	AssetValuePresenceChecker
-	AssetValueAdder
+	AssetValuesAdder
 	AssetValuesReplacer
 	AssetBatchValuesReplacer
 	AssetValueCutter
