@@ -8,6 +8,7 @@ type PresenceChecker interface {
 
 type Getter interface {
 	Get(key string) (io.ReadCloser, error)
+	GetFromStorage(key string) (io.ReadCloser, error)
 }
 
 type Setter interface {

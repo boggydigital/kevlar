@@ -65,7 +65,10 @@ func (lkv *localKeyValues) Get(key string) (io.ReadCloser, error) {
 	if !lkv.Has(key) {
 		return nil, nil
 	}
+	return lkv.GetFromStorage(key)
+}
 
+func (lkv *localKeyValues) GetFromStorage(key string) (io.ReadCloser, error) {
 	valAbsPath := lkv.valuePath(key)
 	if _, err := os.Stat(valAbsPath); os.IsNotExist(err) {
 		return nil, nil

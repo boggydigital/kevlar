@@ -73,6 +73,27 @@ func (idx index) read(dir string) error {
 
 func (idx index) write(dir string) error {
 
+	// don't write index contents as is - this could lead to data loss
+	// imagine having fewer entries in the current index than existing index
+	// if we write current index in that case we'll lose all the entries that
+	// are present in existing index, but not current
+	//
+	// to avoid that - read existing index in the same dir first
+	// then replace values for each key from the current index
+	// finally write that updated index to disk
+	//
+	// this would avoid data loss, if the index was loaded for fewer values
+	// than existing index contains
+
+	exind := make(index)
+	if err := exind.read(dir); err != nil {
+		return err
+	}
+
+	for k, v := range idx {
+		exind[k] = v
+	}
+
 	indexPath := indexPath(dir)
 
 	indexFile, err := os.Create(indexPath)
@@ -81,7 +102,7 @@ func (idx index) write(dir string) error {
 	}
 	defer indexFile.Close()
 
-	return gob.NewEncoder(indexFile).Encode(idx)
+	return gob.NewEncoder(indexFile).Encode(exind)
 }
 
 func (idx index) upd(key string, hash string) {
