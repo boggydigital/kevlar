@@ -12,7 +12,7 @@ type BatchValueEditor interface {
 	BatchCutValues(keysValues map[string][]string) error
 }
 
-type ValuePresenceChecker interface {
+type ValueChecker interface {
 	HasVal(key string, val string) bool
 }
 
@@ -31,7 +31,7 @@ type TermsMatcher interface {
 type ValueReader interface {
 	KeysEnumerator
 	PresenceChecker
-	ValuePresenceChecker
+	ValueChecker
 	AllValuesGetter
 	FirstValueGetter
 	TermsMatcher

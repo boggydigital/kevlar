@@ -45,6 +45,7 @@ type AssetsExporter interface {
 }
 
 type ReduxAssets interface {
+	AssetChecker
 	AssetReader
 	AssetEditor
 	AssetBatchEditor

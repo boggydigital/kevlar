@@ -146,12 +146,10 @@ func (rdx *redux) BatchCutValues(keyValues map[string][]string) error {
 		return nil
 	}
 	filteredValues := make(map[string][]string)
-	for key, values := range keyValues {
-		if !rdx.Has(key) {
-			continue
-		}
-		for _, v := range rdx.keyReductions[key] {
-			if slices.Contains(values, v) {
+	for key, values := range rdx.keyReductions {
+		filteredValues[key] = make([]string, 0, len(values))
+		for _, v := range values {
+			if slices.Contains(keyValues[key], v) {
 				continue
 			}
 			filteredValues[key] = append(filteredValues[key], v)
