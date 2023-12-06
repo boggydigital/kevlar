@@ -66,6 +66,13 @@ func (rl *reduxList) AddValues(asset, key string, values ...string) error {
 	return rl.reductions[asset].AddValues(key, values...)
 }
 
+func (rl *reduxList) BatchAddValues(asset string, keyValues map[string][]string) error {
+	if !rl.Has(asset) {
+		return fmt.Errorf("asset %s is not present in this list", asset)
+	}
+	return rl.reductions[asset].BatchAddValues(keyValues)
+}
+
 func (rl *reduxList) ReplaceValues(asset, key string, values ...string) error {
 	if !rl.Has(asset) {
 		return fmt.Errorf("asset %s is not present in this list", asset)
@@ -85,6 +92,13 @@ func (rl *reduxList) CutVal(asset, key, val string) error {
 		return fmt.Errorf("asset %s is not present in this list", asset)
 	}
 	return rl.reductions[asset].CutVal(key, val)
+}
+
+func (rl *reduxList) BatchCutValues(asset string, keyValues map[string][]string) error {
+	if !rl.Has(asset) {
+		return fmt.Errorf("asset %s is not present in this list", asset)
+	}
+	return rl.reductions[asset].BatchCutValues(keyValues)
 }
 
 func (rl *reduxList) GetFirstVal(asset, key string) (string, bool) {

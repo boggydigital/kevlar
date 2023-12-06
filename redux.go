@@ -3,6 +3,7 @@ package kvas
 import (
 	"bytes"
 	"encoding/gob"
+	"golang.org/x/exp/slices"
 	"io"
 	"strings"
 	"time"
@@ -87,6 +88,21 @@ func (rdx *redux) AddValues(key string, values ...string) error {
 	return rdx.write()
 }
 
+func (rdx *redux) BatchAddValues(keyValues map[string][]string) error {
+	for key, values := range keyValues {
+		if !rdx.Has(key) {
+			continue
+		}
+		for _, v := range values {
+			if slices.Contains(rdx.keyReductions[key], v) {
+				continue
+			}
+			rdx.keyReductions[key] = append(rdx.keyReductions[key], v)
+		}
+	}
+	return rdx.write()
+}
+
 func (rdx *redux) ReplaceValues(key string, values ...string) error {
 	rdx.keyReductions[key] = values
 	return rdx.write()
@@ -115,6 +131,28 @@ func (rdx *redux) CutVal(key string, val string) error {
 
 	if len(rdx.keyReductions[key]) == 0 {
 		delete(rdx.keyReductions, key)
+	}
+	return rdx.write()
+}
+
+func (rdx *redux) BatchCutValues(keyValues map[string][]string) error {
+	filteredValues := make(map[string][]string)
+	for key, values := range keyValues {
+		if !rdx.Has(key) {
+			continue
+		}
+		for _, v := range rdx.keyReductions[key] {
+			if slices.Contains(values, v) {
+				continue
+			}
+			filteredValues[key] = append(filteredValues[key], v)
+		}
+	}
+	for key, values := range filteredValues {
+		rdx.keyReductions[key] = values
+		if len(rdx.keyReductions[key]) == 0 {
+			delete(rdx.keyReductions, key)
+		}
 	}
 	return rdx.write()
 }

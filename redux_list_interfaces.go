@@ -2,48 +2,29 @@ package kvas
 
 import "io"
 
-type AssetKeysEnumerator interface {
+type AssetReader interface {
 	Keys(asset string) []string
-}
-
-type AssetPresenceChecker interface {
-	Has(asset string) bool
-}
-
-type AssetKeyPresenceChecker interface {
-	HasKey(asset, key string) bool
-}
-
-type AssetValuePresenceChecker interface {
-	HasVal(asset, key, val string) bool
-}
-
-type AssetValuesAdder interface {
-	AddValues(asset, key string, values ...string) error
-}
-
-type AssetValuesReplacer interface {
-	ReplaceValues(asset, key string, values ...string) error
-}
-
-type AssetBatchValuesReplacer interface {
-	BatchReplaceValues(asset string, keyValues map[string][]string) error
-}
-
-type AssetValueCutter interface {
-	CutVal(asset, key, val string) error
-}
-
-type AssetAllValuesGetter interface {
+	GetFirstVal(asset, key string) (string, bool)
+	IsSupported(assets ...string) error
 	GetAllValues(asset, key string) ([]string, bool)
 }
 
-type AssetFirstValueGetter interface {
-	GetFirstVal(asset, key string) (string, bool)
+type AssetChecker interface {
+	Has(asset string) bool
+	HasKey(asset, key string) bool
+	HasVal(asset, key, val string) bool
 }
 
-type AssetsSupportChecker interface {
-	IsSupported(assets ...string) error
+type AssetEditor interface {
+	AddValues(asset, key string, values ...string) error
+	ReplaceValues(asset, key string, values ...string) error
+	CutVal(asset, key, val string) error
+}
+
+type AssetBatchEditor interface {
+	BatchAddValues(asset string, keyValues map[string][]string) error
+	BatchReplaceValues(asset string, keyValues map[string][]string) error
+	BatchCutValues(asset string, keyValues map[string][]string) error
 }
 
 type QueryMatcher interface {
@@ -52,9 +33,6 @@ type QueryMatcher interface {
 
 type AssetsRefresher interface {
 	RefreshReduxAssets() (ReduxAssets, error)
-}
-
-type AssetsModTimeGetter interface {
 	ReduxAssetsModTime() (int64, error)
 }
 
@@ -67,20 +45,11 @@ type AssetsExporter interface {
 }
 
 type ReduxAssets interface {
-	AssetKeysEnumerator
-	AssetPresenceChecker
-	AssetKeyPresenceChecker
-	AssetValuePresenceChecker
-	AssetValuesAdder
-	AssetValuesReplacer
-	AssetBatchValuesReplacer
-	AssetValueCutter
-	AssetAllValuesGetter
-	AssetFirstValueGetter
-	AssetsSupportChecker
+	AssetReader
+	AssetEditor
+	AssetBatchEditor
 	QueryMatcher
 	AssetsRefresher
-	AssetsModTimeGetter
 	AssetsSorter
 	AssetsExporter
 }

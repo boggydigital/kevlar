@@ -73,6 +73,10 @@ func (irap *IRAProxy) AddValues(asset, key string, values ...string) error {
 	return IRAProxyReadOnlyError
 }
 
+func (irap *IRAProxy) BatchAddValues(asset string, keyValues map[string][]string) error {
+	return IRAProxyReadOnlyError
+}
+
 func (irap *IRAProxy) ReplaceValues(asset, key string, values ...string) error {
 	return IRAProxyReadOnlyError
 }
@@ -82,6 +86,10 @@ func (irap *IRAProxy) BatchReplaceValues(asset string, keyValues map[string][]st
 }
 
 func (irap *IRAProxy) CutVal(asset, key, val string) error {
+	return IRAProxyReadOnlyError
+}
+
+func (irap *IRAProxy) BatchCutValues(asset string, keyValues map[string][]string) error {
 	return IRAProxyReadOnlyError
 }
 

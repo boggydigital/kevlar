@@ -1,26 +1,15 @@
 package kvas
 
-type ValuesAdder interface {
+type ValueEditor interface {
 	AddValues(key string, values ...string) error
-}
-
-type ValuesReplacer interface {
 	ReplaceValues(key string, values ...string) error
-}
-
-type BatchValuesReplacer interface {
-	BatchReplaceValues(keysValues map[string][]string) error
-}
-
-type ValueCutter interface {
 	CutVal(key string, val string) error
 }
 
-type ValueEditor interface {
-	ValuesAdder
-	ValuesReplacer
-	BatchValuesReplacer
-	ValueCutter
+type BatchValueEditor interface {
+	BatchAddValues(keysValues map[string][]string) error
+	BatchReplaceValues(keysValues map[string][]string) error
+	BatchCutValues(keysValues map[string][]string) error
 }
 
 type ValuePresenceChecker interface {
@@ -50,15 +39,12 @@ type ValueReader interface {
 
 type ReduxRefresher interface {
 	RefreshReduxValues() (ReduxValues, error)
-}
-
-type ReduxModTimeGetter interface {
 	ReduxModTime() (int64, error)
 }
 
 type ReduxValues interface {
 	ValueEditor
+	BatchValueEditor
 	ValueReader
 	ReduxRefresher
-	ReduxModTimeGetter
 }
