@@ -89,6 +89,9 @@ func (rdx *redux) AddValues(key string, values ...string) error {
 }
 
 func (rdx *redux) BatchAddValues(keyValues map[string][]string) error {
+	if len(keyValues) == 0 {
+		return nil
+	}
 	for key, values := range keyValues {
 		if !rdx.Has(key) {
 			continue
@@ -109,6 +112,9 @@ func (rdx *redux) ReplaceValues(key string, values ...string) error {
 }
 
 func (rdx *redux) BatchReplaceValues(keysValues map[string][]string) error {
+	if len(keysValues) == 0 {
+		return nil
+	}
 	for key, values := range keysValues {
 		rdx.keyReductions[key] = values
 	}
@@ -136,6 +142,9 @@ func (rdx *redux) CutVal(key string, val string) error {
 }
 
 func (rdx *redux) BatchCutValues(keyValues map[string][]string) error {
+	if len(keyValues) == 0 {
+		return nil
+	}
 	filteredValues := make(map[string][]string)
 	for key, values := range keyValues {
 		if !rdx.Has(key) {
