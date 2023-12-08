@@ -9,6 +9,7 @@ type ValueEditor interface {
 type BatchValueEditor interface {
 	BatchAddValues(keysValues map[string][]string) error
 	BatchReplaceValues(keysValues map[string][]string) error
+	BatchCutKeys(keys []string) error
 	BatchCutValues(keysValues map[string][]string) error
 }
 

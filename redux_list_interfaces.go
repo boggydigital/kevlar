@@ -13,6 +13,7 @@ type AssetChecker interface {
 	Has(asset string) bool
 	HasKey(asset, key string) bool
 	HasVal(asset, key, val string) bool
+	MustHave(asset string) error
 }
 
 type AssetEditor interface {
@@ -24,6 +25,7 @@ type AssetEditor interface {
 type AssetBatchEditor interface {
 	BatchAddValues(asset string, keyValues map[string][]string) error
 	BatchReplaceValues(asset string, keyValues map[string][]string) error
+	BatchCutKeys(asset string, keys []string) error
 	BatchCutValues(asset string, keyValues map[string][]string) error
 }
 

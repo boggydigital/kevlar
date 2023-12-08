@@ -52,6 +52,13 @@ func (rl *reduxList) HasKey(asset, key string) bool {
 	return rl.reductions[asset].Has(key)
 }
 
+func (rl *reduxList) MustHave(asset string) error {
+	if !rl.Has(asset) {
+		return fmt.Errorf("asset %s is not present in this list", asset)
+	}
+	return nil
+}
+
 func (rl *reduxList) HasVal(asset, key, val string) bool {
 	if !rl.Has(asset) {
 		return false
@@ -60,45 +67,52 @@ func (rl *reduxList) HasVal(asset, key, val string) bool {
 }
 
 func (rl *reduxList) AddValues(asset, key string, values ...string) error {
-	if !rl.Has(asset) {
-		return fmt.Errorf("asset %s is not present in this list", asset)
+	if err := rl.MustHave(asset); err != nil {
+		return err
 	}
 	return rl.reductions[asset].AddValues(key, values...)
 }
 
 func (rl *reduxList) BatchAddValues(asset string, keyValues map[string][]string) error {
-	if !rl.Has(asset) {
-		return fmt.Errorf("asset %s is not present in this list", asset)
+	if err := rl.MustHave(asset); err != nil {
+		return err
 	}
 	return rl.reductions[asset].BatchAddValues(keyValues)
 }
 
 func (rl *reduxList) ReplaceValues(asset, key string, values ...string) error {
-	if !rl.Has(asset) {
-		return fmt.Errorf("asset %s is not present in this list", asset)
+	if err := rl.MustHave(asset); err != nil {
+		return err
 	}
 	return rl.reductions[asset].ReplaceValues(key, values...)
 }
 
 func (rl *reduxList) BatchReplaceValues(asset string, keyValues map[string][]string) error {
-	if !rl.Has(asset) {
-		return fmt.Errorf("asset %s is not present in this list", asset)
+	if err := rl.MustHave(asset); err != nil {
+		return err
 	}
 	return rl.reductions[asset].BatchReplaceValues(keyValues)
 }
 
 func (rl *reduxList) CutVal(asset, key, val string) error {
-	if !rl.Has(asset) {
-		return fmt.Errorf("asset %s is not present in this list", asset)
+	if err := rl.MustHave(asset); err != nil {
+		return err
 	}
 	return rl.reductions[asset].CutVal(key, val)
 }
 
 func (rl *reduxList) BatchCutValues(asset string, keyValues map[string][]string) error {
-	if !rl.Has(asset) {
-		return fmt.Errorf("asset %s is not present in this list", asset)
+	if err := rl.MustHave(asset); err != nil {
+		return err
 	}
 	return rl.reductions[asset].BatchCutValues(keyValues)
+}
+
+func (rl *reduxList) BatchCutKeys(asset string, keys []string) error {
+	if err := rl.MustHave(asset); err != nil {
+		return err
+	}
+	return rl.reductions[asset].BatchCutKeys(keys)
 }
 
 func (rl *reduxList) GetFirstVal(asset, key string) (string, bool) {
@@ -171,8 +185,8 @@ func (rl *reduxList) Match(query map[string][]string, anyCase, contains bool) ma
 
 func (rl *reduxList) IsSupported(assets ...string) error {
 	for _, a := range assets {
-		if _, ok := rl.reductions[a]; !ok {
-			return fmt.Errorf("unsupported asset %s", a)
+		if err := rl.MustHave(a); err != nil {
+			return err
 		}
 	}
 

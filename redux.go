@@ -164,6 +164,16 @@ func (rdx *redux) BatchCutValues(keyValues map[string][]string) error {
 	return rdx.write()
 }
 
+func (rdx *redux) BatchCutKeys(keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		delete(rdx.keyReductions, key)
+	}
+	return rdx.write()
+}
+
 func (rdx *redux) write() error {
 	kv, err := ConnectLocal(rdx.dir, GobExt)
 	if err != nil {

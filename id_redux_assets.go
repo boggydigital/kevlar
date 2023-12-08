@@ -2,6 +2,7 @@ package kvas
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/exp/slices"
 	"io"
 	"time"
@@ -69,6 +70,13 @@ func (irap *IRAProxy) HasVal(asset, key, val string) bool {
 	return false
 }
 
+func (irap *IRAProxy) MustHave(asset string) error {
+	if !irap.Has(asset) {
+		return fmt.Errorf("asset %s is not present in this list", asset)
+	}
+	return nil
+}
+
 func (irap *IRAProxy) AddValues(asset, key string, values ...string) error {
 	return IRAProxyReadOnlyError
 }
@@ -90,6 +98,10 @@ func (irap *IRAProxy) CutVal(asset, key, val string) error {
 }
 
 func (irap *IRAProxy) BatchCutValues(asset string, keyValues map[string][]string) error {
+	return IRAProxyReadOnlyError
+}
+
+func (irap *IRAProxy) BatchCutKeys(asset string, keys []string) error {
 	return IRAProxyReadOnlyError
 }
 
