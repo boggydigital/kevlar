@@ -93,9 +93,6 @@ func (rdx *redux) BatchAddValues(keyValues map[string][]string) error {
 		return nil
 	}
 	for key, values := range keyValues {
-		if !rdx.Has(key) {
-			continue
-		}
 		for _, v := range values {
 			if slices.Contains(rdx.keyReductions[key], v) {
 				continue
