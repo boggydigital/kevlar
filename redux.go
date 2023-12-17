@@ -3,6 +3,7 @@ package kvas
 import (
 	"bytes"
 	"encoding/gob"
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"io"
 	"strings"
@@ -56,11 +57,7 @@ func ConnectRedux(dir, asset string) (ReduxValues, error) {
 }
 
 func (rdx *redux) Keys() []string {
-	keys := make([]string, 0, len(rdx.keyReductions))
-	for k := range rdx.keyReductions {
-		keys = append(keys, k)
-	}
-	return keys
+	return maps.Keys(rdx.keyReductions)
 }
 
 func (rdx *redux) Has(key string) bool {

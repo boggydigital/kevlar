@@ -42,7 +42,7 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 	kv := &localKeyValues{
 		dir: dir,
 		ext: ext,
-		idx: make(index, 0),
+		idx: make(index),
 		mtx: sync.Mutex{},
 	}
 	err := kv.idx.read(kv.dir)
