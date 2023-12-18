@@ -15,7 +15,7 @@ type ReadableRedux interface {
 	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
 	Match(query map[string][]string, options ...MatchOption) []string
 	Sort(ids []string, desc bool, sortBy ...string) ([]string, error)
-	Export(w io.Writer, ids ...string) error
+	Export(w io.Writer, assets ...string) error
 }
 
 type WriteableRedux interface {

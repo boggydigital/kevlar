@@ -2,20 +2,23 @@ package kvas
 
 import (
 	"github.com/boggydigital/wits"
+	"golang.org/x/exp/maps"
 	"io"
+	"sort"
 )
 
-func (rdx *Redux) Export(w io.Writer, ids ...string) error {
+func (rdx *Redux) Export(w io.Writer, assets ...string) error {
+
+	if len(assets) == 0 {
+		assets = maps.Keys(rdx.assetKeyValues)
+	}
+
+	sort.Strings(assets)
 
 	skv := make(wits.SectionKeyValues)
 
-	for _, id := range ids {
-		skv[id] = make(wits.KeyValues)
-		for p := range rdx.assetKeyValues {
-			if vals, ok := rdx.GetAllValues(p, id); ok {
-				skv[id][p] = vals
-			}
-		}
+	for _, asset := range assets {
+		skv[asset] = rdx.assetKeyValues[asset]
 	}
 
 	return skv.Write(w)
