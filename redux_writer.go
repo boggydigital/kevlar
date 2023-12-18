@@ -6,8 +6,12 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func (rdx *Redux) AddValues(asset, key string, values ...string) error {
-	if !rdx.Has(asset) {
+func ReduxWriter(dir string, assets ...string) (WriteableRedux, error) {
+	return connectRedux(dir, assets...)
+}
+
+func (rdx *Redux) addValues(asset, key string, values ...string) error {
+	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
 	newValues := make([]string, 0, len(values))
@@ -17,28 +21,27 @@ func (rdx *Redux) AddValues(asset, key string, values ...string) error {
 		}
 	}
 	rdx.assetKeyValues[asset][key] = append(rdx.assetKeyValues[asset][key], newValues...)
+	return nil
+}
+
+func (rdx *Redux) AddValues(asset, key string, values ...string) error {
+	if err := rdx.addValues(asset, key, values...); err != nil {
+		return err
+	}
 	return rdx.write(asset)
 }
 
 func (rdx *Redux) BatchAddValues(asset string, keyValues map[string][]string) error {
-	if !rdx.Has(asset) {
-		return UnknownReduxAsset(asset)
-	}
-	if len(keyValues) == 0 {
-		return nil
-	}
 	for key, values := range keyValues {
-		for _, v := range values {
-			if !rdx.HasValue(asset, key, v) {
-				rdx.assetKeyValues[asset][key] = append(rdx.assetKeyValues[asset][key], v)
-			}
+		if err := rdx.addValues(asset, key, values...); err != nil {
+			return err
 		}
 	}
 	return rdx.write(asset)
 }
 
 func (rdx *Redux) replaceValues(asset, key string, values ...string) error {
-	if !rdx.Has(asset) {
+	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
 	rdx.assetKeyValues[asset][key] = values
@@ -65,7 +68,7 @@ func (rdx *Redux) BatchReplaceValues(asset string, keyValues map[string][]string
 }
 
 func (rdx *Redux) cutValues(asset, key string, values ...string) error {
-	if !rdx.Has(asset) {
+	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
 	if !rdx.HasKey(asset, key) {
@@ -110,7 +113,7 @@ func (rdx *Redux) BatchCutValues(asset string, keyValues map[string][]string) er
 }
 
 func (rdx *Redux) BatchCutKeys(asset string, keys []string) error {
-	if !rdx.Has(asset) {
+	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
 	if len(keys) == 0 {
@@ -124,7 +127,7 @@ func (rdx *Redux) BatchCutKeys(asset string, keys []string) error {
 }
 
 func (rdx *Redux) write(asset string) error {
-	if !rdx.Has(asset) {
+	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
 
@@ -133,5 +136,9 @@ func (rdx *Redux) write(asset string) error {
 		return err
 	}
 
-	return rdx.kvr.Set(asset, buf)
+	return rdx.kv.Set(asset, buf)
+}
+
+func (rdx *Redux) RefreshWriter() (WriteableRedux, error) {
+	return rdx.refresh()
 }

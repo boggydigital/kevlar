@@ -14,27 +14,27 @@ func UnknownReduxAsset(asset string) error {
 
 type Redux struct {
 	dir            string
-	kvr            KeyValues
+	kv             KeyValues
 	assetKeyValues map[string]map[string][]string
 	modTime        int64
 	mtx            *sync.Mutex
 }
 
 func connectRedux(dir string, assets ...string) (*Redux, error) {
-	kvr, err := ConnectLocal(dir, GobExt)
+	kv, err := ConnectLocal(dir, GobExt)
 	if err != nil {
 		return nil, err
 	}
 
 	assetKeyValues := make(map[string]map[string][]string)
 	for _, asset := range assets {
-		if assetKeyValues[asset], err = loadAsset(kvr, asset); err != nil {
+		if assetKeyValues[asset], err = loadAsset(kv, asset); err != nil {
 			return nil, err
 		}
 	}
 
 	return &Redux{
-		kvr:            kvr,
+		kv:             kv,
 		dir:            dir,
 		assetKeyValues: assetKeyValues,
 		modTime:        time.Now().Unix(),
@@ -42,20 +42,14 @@ func connectRedux(dir string, assets ...string) (*Redux, error) {
 	}, nil
 }
 
-func ReduxReader(dir string, assets ...string) (ReadableRedux, error) {
-	return connectRedux(dir, assets...)
-}
-
-func ReduxWriter(dir string, assets ...string) (WriteableRedux, error) {
-	return connectRedux(dir, assets...)
-}
-
 func loadAsset(kvr KeyValues, asset string) (map[string][]string, error) {
 	arc, err := kvr.Get(asset)
 	if err != nil {
 		return nil, err
 	}
-	defer arc.Close()
+	if arc != nil {
+		defer arc.Close()
+	}
 
 	var keyValues map[string][]string
 	if arc != nil {

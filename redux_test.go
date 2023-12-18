@@ -3,6 +3,7 @@ package kvas
 import (
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 func reduxCleanup(assets ...string) error {
@@ -36,6 +37,7 @@ func mockRedux() *Redux {
 				"k5": {"v51", "v52", "v53", "v54", "v55"},
 			},
 		},
-		kvr: mockLocalKeyValues(),
+		kv:  mockLocalKeyValues(),
+		mtx: &sync.Mutex{},
 	}
 }

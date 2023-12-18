@@ -5,13 +5,13 @@ import "io"
 type ReadableRedux interface {
 	MustHave(assets ...string) error
 	Keys(asset string) []string
-	Has(asset string) bool
+	HasAsset(asset string) bool
 	HasKey(asset, key string) bool
 	HasValue(asset, key, val string) bool
 	GetAllValues(asset, key string) ([]string, bool)
 	GetFirstVal(asset, key string) (string, bool)
 	ModTime() (int64, error)
-	Refresh() error
+	RefreshReader() (ReadableRedux, error)
 	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
 	Match(query map[string][]string, options ...MatchOption) []string
 	Sort(ids []string, desc bool, sortBy ...string) ([]string, error)
@@ -27,7 +27,8 @@ type WriteableRedux interface {
 	CutValues(asset, key string, values ...string) error
 	BatchCutValues(asset string, keyValues map[string][]string) error
 	BatchCutKeys(asset string, keys []string) error
+	RefreshWriter() (WriteableRedux, error)
 }
 
-type ToolableRedux interface {
+type FixableRedux interface {
 }

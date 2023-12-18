@@ -4,6 +4,7 @@ import (
 	"github.com/boggydigital/testo"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func TestRedux_MustHave(t *testing.T) {
@@ -26,7 +27,7 @@ func TestRedux_MustHave(t *testing.T) {
 	}
 }
 
-func TestReduxKeys(t *testing.T) {
+func TestRedux_Keys(t *testing.T) {
 	rdx := mockRedux()
 	for asset := range rdx.assetKeyValues {
 		keys := rdx.Keys(asset)
@@ -38,7 +39,7 @@ func TestReduxKeys(t *testing.T) {
 	}
 }
 
-func TestReduxHas(t *testing.T) {
+func TestRedux_HasAsset(t *testing.T) {
 	tests := []struct {
 		asset string
 		exp   bool
@@ -51,12 +52,12 @@ func TestReduxHas(t *testing.T) {
 	rdx := mockRedux()
 	for _, tt := range tests {
 		t.Run(tt.asset, func(t *testing.T) {
-			testo.EqualValues(t, rdx.Has(tt.asset), tt.exp)
+			testo.EqualValues(t, rdx.HasAsset(tt.asset), tt.exp)
 		})
 	}
 }
 
-func TestReduxHasKey(t *testing.T) {
+func TestRedux_HasKey(t *testing.T) {
 	tests := []struct {
 		asset, key string
 		exp        bool
@@ -76,7 +77,7 @@ func TestReduxHasKey(t *testing.T) {
 	}
 }
 
-func TestReduxHasValue(t *testing.T) {
+func TestRedux_HasValue(t *testing.T) {
 	tests := []struct {
 		asset, key, value string
 		exp               bool
@@ -98,7 +99,7 @@ func TestReduxHasValue(t *testing.T) {
 	}
 }
 
-func TestReduxGetAllValues(t *testing.T) {
+func TestRedux_GetAllValues(t *testing.T) {
 	tests := []struct {
 		asset, key string
 		ok         bool
@@ -121,7 +122,7 @@ func TestReduxGetAllValues(t *testing.T) {
 	}
 }
 
-func TestReduxGetFirstVal(t *testing.T) {
+func TestRedux_GetFirstVal(t *testing.T) {
 	tests := []struct {
 		asset, key string
 		ok         bool
@@ -142,6 +143,60 @@ func TestReduxGetFirstVal(t *testing.T) {
 			testo.EqualValues(t, ok, tt.ok)
 		})
 	}
+}
+
+func TestRedux_ModTime(t *testing.T) {
+	start := time.Now().Unix()
+
+	rdx := mockRedux()
+
+	// first test: compare unmodified redux mod time
+	// expected result: mod time should be less than start of the test
+
+	rmt, err := rdx.ModTime()
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, rmt, start, testo.Less)
+
+	// second test: add a value and compare redux mod time
+	// expected result: mod time should be greater or equal than start of the test
+
+	testo.Error(t, rdx.AddValues("a1", "k1", "test"), false)
+
+	rmt, err = rdx.ModTime()
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, rmt, start, testo.GreaterOrEqual)
+
+	testo.Error(t, cleanupLocalKeyValues(rdx.kv.(*localKeyValues)), false)
+}
+
+func TestRedux_RefreshReader(t *testing.T) {
+	rdx := mockRedux()
+
+	// first test: set modTime to force Refresh and try RefreshReader
+	// expected result: redux is refreshed and modTime is updated
+
+	rdx.modTime = -1
+	rrdx, err := rdx.RefreshReader()
+	testo.Error(t, err, false)
+
+	var ok bool
+	rdx, ok = rrdx.(*Redux)
+	testo.EqualValues(t, ok, true)
+
+	testo.CompareInt64(t, rdx.modTime, -1, testo.Greater)
+
+	// second time: don't change modTime and try to RefreshReader again
+	// expected result: no refresh is necessary and modTime is unchanged
+
+	startModTime := rdx.modTime
+
+	rrdx, err = rdx.RefreshReader()
+	testo.Error(t, err, false)
+
+	rdx, ok = rrdx.(*Redux)
+	testo.EqualValues(t, ok, true)
+
+	testo.EqualValues(t, rdx.modTime, startModTime)
 }
 
 //func TestAnyValueMatchesTerm(t *testing.T) {
