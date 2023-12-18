@@ -12,7 +12,7 @@ func (rdx *Redux) AddValues(asset, key string, values ...string) error {
 	}
 	newValues := make([]string, 0, len(values))
 	for _, v := range values {
-		if !rdx.HasVal(asset, key, v) {
+		if !rdx.HasValue(asset, key, v) {
 			newValues = append(newValues, v)
 		}
 	}
@@ -29,7 +29,7 @@ func (rdx *Redux) BatchAddValues(asset string, keyValues map[string][]string) er
 	}
 	for key, values := range keyValues {
 		for _, v := range values {
-			if !rdx.HasVal(asset, key, v) {
+			if !rdx.HasValue(asset, key, v) {
 				rdx.assetKeyValues[asset][key] = append(rdx.assetKeyValues[asset][key], v)
 			}
 		}

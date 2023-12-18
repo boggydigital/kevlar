@@ -7,13 +7,13 @@ type ReadableRedux interface {
 	Keys(asset string) []string
 	Has(asset string) bool
 	HasKey(asset, key string) bool
-	HasVal(asset, key, val string) bool
-	GetFirstVal(asset, key string) (string, bool)
+	HasValue(asset, key, val string) bool
 	GetAllValues(asset, key string) ([]string, bool)
+	GetFirstVal(asset, key string) (string, bool)
 	ModTime() (int64, error)
 	Refresh() error
-	MatchAsset(asset string, terms []string, scope []string, anyCase bool, contains bool) []string
-	Match(query map[string][]string, anyCase, contains bool) []string
+	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
+	Match(query map[string][]string, options ...MatchOption) []string
 	Sort(ids []string, desc bool, sortBy ...string) ([]string, error)
 	Export(w io.Writer, ids ...string) error
 }

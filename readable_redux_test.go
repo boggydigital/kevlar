@@ -2,186 +2,148 @@ package kvas
 
 import (
 	"github.com/boggydigital/testo"
+	"strconv"
 	"testing"
 )
 
-func TestReduxKeys(t *testing.T) {
-	rdx := mockRedux()
+func TestRedux_MustHave(t *testing.T) {
+	tests := []struct {
+		assets []string
+		errExp bool
+	}{
+		{[]string{}, false},
+		{[]string{""}, true},
+		{[]string{"a1"}, false},
+		{[]string{"a1", "1a"}, true},
+	}
 
-	keys := rdx.Keys("a1")
-	testo.EqualValues(t, len(keys), len(rdx.assetKeyValues["a1"]))
-	for _, k := range keys {
-		_, ok := rdx.assetKeyValues["a1"][k]
-		testo.EqualValues(t, ok, true)
+	rdx := mockRedux()
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			err := rdx.MustHave(tt.assets...)
+			testo.Error(t, err, tt.errExp)
+		})
 	}
 }
 
-//func TestReduxHas(t *testing.T) {
-//	tests := []struct {
-//		key string
-//		exp bool
-//	}{
-//		{"", false},
-//		{"k1", true},
-//	}
-//
-//	rdx := mockRedux()
-//	for _, tt := range tests {
-//		t.Run(tt.key, func(t *testing.T) {
-//			testo.EqualValues(t, rdx.Has(tt.key), tt.exp)
-//		})
-//	}
-//}
-//
-//func TestReduxHasVal(t *testing.T) {
-//	tests := []struct {
-//		key, val string
-//		exp      bool
-//	}{
-//		{"", "", false},
-//		{"k1", "", false},
-//		{"k1", "v1", true},
-//		{"k1", "v11", false},
-//	}
-//
-//	rdx := mockRedux()
-//	for _, tt := range tests {
-//		t.Run(tt.key+tt.val, func(t *testing.T) {
-//			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), tt.exp)
-//		})
-//	}
-//}
-//
-//func TestReduxAddVal(t *testing.T) {
-//	tests := []struct {
-//		key, val string
-//		exist    bool
-//	}{
-//		{"", "new", false},
-//		{"k1", "", false},
-//		{"k1", "v1", true},
-//		{"k1", "v11", false},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.key+tt.val, func(t *testing.T) {
-//			rdx := mockRedux()
-//			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), tt.exist)
-//			testo.Error(t, rdx.AddValues(tt.key, tt.val), false)
-//			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), true)
-//			testo.Error(t, reduxCleanup(testAsset), false)
-//		})
-//	}
-//}
-//
-//func TestReduxReplaceValues(t *testing.T) {
-//	tests := []struct {
-//		key    string
-//		values []string
-//	}{
-//		{"", []string{"new"}},
-//		{"k1", nil},
-//		{"k1", []string{""}},
-//		{"k1", []string{"v1", "v2"}},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.key+strings.Join(tt.values, ""), func(t *testing.T) {
-//			rdx := mockRedux()
-//			testo.Error(t, rdx.ReplaceValues(tt.key, tt.values...), false)
-//			testo.DeepEqual(t, rdx.keyReductions[tt.key], tt.values)
-//			testo.Error(t, reduxCleanup(testAsset), false)
-//		})
-//	}
-//}
-//
-//func TestReduxBatchReplaceValues(t *testing.T) {
-//	tests := []struct {
-//		keyValues map[string][]string
-//	}{
-//		{map[string][]string{"": {"new"}}},
-//		{map[string][]string{"k1": nil}},
-//		{map[string][]string{"k1": {""}}},
-//		{map[string][]string{"k1": {"v1", "v2"}}},
-//	}
-//
-//	for ii, tt := range tests {
-//		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-//			rdx := mockRedux()
-//			testo.Error(t, rdx.BatchReplaceValues(tt.keyValues), false)
-//			for key, values := range tt.keyValues {
-//				testo.DeepEqual(t, rdx.keyReductions[key], values)
-//			}
-//			testo.Error(t, reduxCleanup(testAsset), false)
-//		})
-//	}
-//}
-//
-//func TestReduxCutVal(t *testing.T) {
-//	tests := []struct {
-//		key, val string
-//		exist    bool
-//	}{
-//		{"", "new", false},
-//		{"k1", "", false},
-//		{"k1", "v1", true},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.key+tt.val, func(t *testing.T) {
-//			rdx := mockRedux()
-//			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), tt.exist)
-//			testo.Error(t, rdx.CutVal(tt.key, tt.val), false)
-//			testo.EqualValues(t, rdx.HasVal(tt.key, tt.val), false)
-//			testo.Error(t, reduxCleanup(testAsset), false)
-//		})
-//	}
-//}
-//
-//func TestReduxGetAllValues(t *testing.T) {
-//	tests := []struct {
-//		key string
-//		ok  bool
-//	}{
-//		{"", false},
-//		{"k1", true},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.key, func(t *testing.T) {
-//			rdx := mockRedux()
-//			values, ok := rdx.GetAllValues(tt.key)
-//			if ok {
-//				testo.DeepEqual(t, rdx.keyReductions[tt.key], values)
-//			}
-//			testo.EqualValues(t, ok, tt.ok)
-//			testo.Error(t, reduxCleanup(testAsset), false)
-//		})
-//	}
-//}
-//
-//func TestReduxGetFirstVal(t *testing.T) {
-//	tests := []struct {
-//		key string
-//		ok  bool
-//	}{
-//		{"", false},
-//		{"k1", true},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.key, func(t *testing.T) {
-//			rdx := mockRedux()
-//			fv, ok := rdx.GetFirstVal(tt.key)
-//			if ok {
-//				testo.DeepEqual(t, rdx.keyReductions[tt.key][0], fv)
-//			}
-//			testo.EqualValues(t, ok, tt.ok)
-//			testo.Error(t, reduxCleanup(testAsset), false)
-//		})
-//	}
-//}
-//
+func TestReduxKeys(t *testing.T) {
+	rdx := mockRedux()
+	for asset := range rdx.assetKeyValues {
+		keys := rdx.Keys(asset)
+		testo.EqualValues(t, len(keys), len(rdx.assetKeyValues[asset]))
+		for _, k := range keys {
+			_, ok := rdx.assetKeyValues[asset][k]
+			testo.EqualValues(t, ok, true)
+		}
+	}
+}
+
+func TestReduxHas(t *testing.T) {
+	tests := []struct {
+		asset string
+		exp   bool
+	}{
+		{"", false},
+		{"a1", true},
+		{"1a", false},
+	}
+
+	rdx := mockRedux()
+	for _, tt := range tests {
+		t.Run(tt.asset, func(t *testing.T) {
+			testo.EqualValues(t, rdx.Has(tt.asset), tt.exp)
+		})
+	}
+}
+
+func TestReduxHasKey(t *testing.T) {
+	tests := []struct {
+		asset, key string
+		exp        bool
+	}{
+		{"", "", false},
+		{"a1", "", false},
+		{"a1", "k1", true},
+		{"a1", "1k", false},
+		{"1a", "k1", false},
+	}
+
+	rdx := mockRedux()
+	for _, tt := range tests {
+		t.Run(tt.asset+tt.key, func(t *testing.T) {
+			testo.EqualValues(t, rdx.HasKey(tt.asset, tt.key), tt.exp)
+		})
+	}
+}
+
+func TestReduxHasValue(t *testing.T) {
+	tests := []struct {
+		asset, key, value string
+		exp               bool
+	}{
+		{"", "", "", false},
+		{"a1", "", "", false},
+		{"a1", "k1", "", false},
+		{"a1", "k1", "v11", true},
+		{"1a", "k1", "v11", false},
+		{"a1", "1k", "v11", false},
+		{"a1", "k1", "11v", false},
+	}
+
+	rdx := mockRedux()
+	for _, tt := range tests {
+		t.Run(tt.asset+tt.key+tt.value, func(t *testing.T) {
+			testo.EqualValues(t, rdx.HasValue(tt.asset, tt.key, tt.value), tt.exp)
+		})
+	}
+}
+
+func TestReduxGetAllValues(t *testing.T) {
+	tests := []struct {
+		asset, key string
+		ok         bool
+	}{
+		{"", "", false},
+		{"a1", "k1", true},
+		{"1a", "k1", false},
+		{"a1", "1k", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.asset+tt.key, func(t *testing.T) {
+			rdx := mockRedux()
+			values, ok := rdx.GetAllValues(tt.asset, tt.key)
+			if ok {
+				testo.DeepEqual(t, rdx.assetKeyValues[tt.asset][tt.key], values)
+			}
+			testo.EqualValues(t, ok, tt.ok)
+		})
+	}
+}
+
+func TestReduxGetFirstVal(t *testing.T) {
+	tests := []struct {
+		asset, key string
+		ok         bool
+	}{
+		{"", "", false},
+		{"a1", "k1", true},
+		{"1a", "k1", false},
+		{"a1", "1k", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			rdx := mockRedux()
+			fv, ok := rdx.GetFirstVal(tt.asset, tt.key)
+			if ok {
+				testo.DeepEqual(t, rdx.assetKeyValues[tt.asset][tt.key][0], fv)
+			}
+			testo.EqualValues(t, ok, tt.ok)
+		})
+	}
+}
+
 //func TestAnyValueMatchesTerm(t *testing.T) {
 //	tests := []struct {
 //		term     string

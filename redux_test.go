@@ -1,15 +1,8 @@
 package kvas
 
 import (
-	"github.com/boggydigital/testo"
 	"os"
 	"path/filepath"
-	"testing"
-)
-
-const (
-	testAsset   = "test_asset"
-	detailAsset = "detail_asset"
 )
 
 func reduxCleanup(assets ...string) error {
@@ -44,16 +37,4 @@ func mockRedux() *Redux {
 			},
 		},
 	}
-}
-
-func TestReduxWriteConnect(t *testing.T) {
-	wrdx := mockRedux()
-
-	testo.Error(t, wrdx.write("a1"), false)
-
-	rdx, err := ReadRedux(os.TempDir(), "a1")
-	testo.Error(t, err, false)
-	testo.Nil(t, rdx, false)
-
-	testo.Error(t, reduxCleanup("a1"), false)
 }

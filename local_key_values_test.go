@@ -3,12 +3,21 @@ package kvas
 import (
 	"bytes"
 	"github.com/boggydigital/testo"
+	"golang.org/x/exp/slices"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
+
+func mockLocalKeyValues() *localKeyValues {
+	return &localKeyValues{
+		idx: mockIndex(),
+		mtx: &sync.Mutex{},
+	}
+}
 
 func TestConnectLocal(t *testing.T) {
 	tests := []struct {
@@ -87,6 +96,89 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 			}
 
 			testo.Error(t, indexCleanup(), false)
+		})
+	}
+}
+
+func TestLocalKeyValues_CreatedAfter(t *testing.T) {
+
+	tests := []struct {
+		after int64
+		exp   []string
+	}{
+		{-1, []string{"1", "2", "3"}},
+		{0, []string{"1", "2", "3"}},
+		{1, []string{"1", "2", "3"}},
+		{2, []string{"2", "3"}},
+		{3, []string{"3"}},
+		{4, []string{}},
+	}
+
+	kv := mockLocalKeyValues()
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			ca := kv.CreatedAfter(tt.after)
+			testo.EqualValues(t, len(ca), len(tt.exp))
+			for _, cav := range ca {
+				testo.EqualValues(t, slices.Contains(tt.exp, cav), true)
+			}
+		})
+	}
+}
+
+func TestLocalKeyValues_ModifiedAfter(t *testing.T) {
+
+	tests := []struct {
+		after int64
+		sm    bool
+		exp   []string
+	}{
+		{-1, false, []string{"1", "2", "3"}},
+		{0, false, []string{"1", "2", "3"}},
+		{1, false, []string{"1", "2", "3"}},
+		{2, false, []string{"2", "3"}},
+		{3, false, []string{"3"}},
+		{4, false, []string{}},
+		{-1, true, []string{}},
+		{0, true, []string{}},
+		{1, true, []string{}},
+		{2, true, []string{}},
+		{3, true, []string{}},
+		{4, true, []string{}},
+	}
+
+	kv := mockLocalKeyValues()
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			ma := kv.ModifiedAfter(tt.after, tt.sm)
+			testo.EqualValues(t, len(ma), len(tt.exp))
+			for _, mav := range ma {
+				testo.EqualValues(t, slices.Contains(tt.exp, mav), true)
+			}
+		})
+	}
+}
+
+func TestLocalKeyValues_IsModifiedAfter(t *testing.T) {
+
+	tests := []struct {
+		key   string
+		after int64
+		exp   bool
+	}{
+		{"1", -1, true},
+		{"1", 0, true},
+		{"1", 1, false},
+		{"1", 2, false},
+		{"2", 0, true},
+		{"2", 1, true},
+		{"2", 2, false},
+	}
+
+	kv := mockLocalKeyValues()
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			testo.EqualValues(t, kv.IsModifiedAfter(tt.key, tt.after), tt.exp)
 		})
 	}
 }

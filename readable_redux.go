@@ -36,7 +36,7 @@ func (rdx *Redux) HasKey(asset, key string) bool {
 	}
 }
 
-func (rdx *Redux) HasVal(asset, key, val string) bool {
+func (rdx *Redux) HasValue(asset, key, val string) bool {
 	if akr, ok := rdx.assetKeyValues[asset]; ok {
 		if kr, ok := akr[key]; ok {
 			return slices.Contains(kr, val)
@@ -46,13 +46,6 @@ func (rdx *Redux) HasVal(asset, key, val string) bool {
 	} else {
 		return false
 	}
-}
-
-func (rdx *Redux) GetFirstVal(asset, key string) (string, bool) {
-	if values, ok := rdx.GetAllValues(asset, key); ok && len(values) > 0 {
-		return values[0], true
-	}
-	return "", false
 }
 
 func (rdx *Redux) GetAllValues(asset, key string) ([]string, bool) {
@@ -65,6 +58,13 @@ func (rdx *Redux) GetAllValues(asset, key string) ([]string, bool) {
 
 	val, ok := rdx.assetKeyValues[asset][key]
 	return val, ok
+}
+
+func (rdx *Redux) GetFirstVal(asset, key string) (string, bool) {
+	if values, ok := rdx.GetAllValues(asset, key); ok && len(values) > 0 {
+		return values[0], true
+	}
+	return "", false
 }
 
 func (rdx *Redux) assetModTime(asset string) (int64, error) {
@@ -107,20 +107,20 @@ func (rdx *Redux) Refresh() error {
 	return nil
 }
 
-func (rdx *Redux) MatchAsset(asset string, terms []string, scope []string, anyCase bool, contains bool) []string {
+func (rdx *Redux) MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string {
 	if scope == nil {
 		scope = rdx.Keys(asset)
 	}
 
 	matches := make(map[string]interface{})
 	for _, term := range terms {
-		if anyCase {
+		if !slices.Contains(options, CaseSensitive) {
 			term = strings.ToLower(term)
 		}
 		for _, key := range scope {
 			if values, ok := rdx.GetAllValues(asset, key); !ok {
 				continue
-			} else if anyValueMatchesTerm(term, values, anyCase, contains) {
+			} else if anyValueMatchesTerm(term, values, options...) {
 				matches[key] = nil
 			}
 		}
@@ -129,18 +129,33 @@ func (rdx *Redux) MatchAsset(asset string, terms []string, scope []string, anyCa
 	return maps.Keys(matches)
 }
 
-func (rdx *Redux) Match(query map[string][]string, anyCase, contains bool) []string {
+type MatchOption int
+
+const (
+	CaseSensitive = iota
+	FullMatchOnly
+)
+
+func (rdx *Redux) Match(query map[string][]string, options ...MatchOption) []string {
 	var matches []string
 	for asset, terms := range query {
 		if !rdx.Has(asset) {
 			continue
 		}
-		matches = rdx.MatchAsset(asset, terms, matches, anyCase, contains)
+		matches = rdx.MatchAsset(asset, terms, matches, options...)
 	}
 	return matches
 }
 
-func anyValueMatchesTerm(term string, values []string, anyCase bool, contains bool) bool {
+func anyValueMatchesTerm(term string, values []string, options ...MatchOption) bool {
+	anyCase := true
+	contains := true
+
+	if options != nil {
+		anyCase = !slices.Contains(options, CaseSensitive)
+		contains = !slices.Contains(options, FullMatchOnly)
+	}
+
 	for _, val := range values {
 		if anyCase {
 			val = strings.ToLower(val)
