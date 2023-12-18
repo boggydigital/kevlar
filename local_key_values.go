@@ -207,6 +207,7 @@ func (lkv *localKeyValues) IndexRefresh() error {
 		if err := lkv.idx.read(lkv.dir); err != nil {
 			return err
 		}
+		lkv.connTime = indexModTime
 	}
 
 	return nil

@@ -14,7 +14,7 @@ func UnknownReduxAsset(asset string) error {
 
 type Redux struct {
 	dir            string
-	kvr            KeyValuesRefresher
+	kvr            KeyValues
 	assetKeyValues map[string]map[string][]string
 	modTime        int64
 	mtx            *sync.Mutex

@@ -128,15 +128,10 @@ func (rdx *Redux) write(asset string) error {
 		return UnknownReduxAsset(asset)
 	}
 
-	kv, err := ConnectLocal(rdx.dir, GobExt)
-	if err != nil {
-		return err
-	}
-
 	buf := new(bytes.Buffer)
 	if err := gob.NewEncoder(buf).Encode(rdx.assetKeyValues[asset]); err != nil {
 		return err
 	}
 
-	return kv.Set(asset, buf)
+	return rdx.kvr.Set(asset, buf)
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// TODO: this doesn't really belong here - move to another module
 type IdReduxAssets = map[string]map[string][]string
 
 var IRAProxyReadOnlyError = errors.New("id redux assets proxy is read-only")

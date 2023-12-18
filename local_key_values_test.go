@@ -6,17 +6,38 @@ import (
 	"golang.org/x/exp/slices"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func mockLocalKeyValues() *localKeyValues {
 	return &localKeyValues{
-		idx: mockIndex(),
-		mtx: &sync.Mutex{},
+		dir:      os.TempDir(),
+		ext:      GobExt,
+		idx:      mockIndex(),
+		mtx:      &sync.Mutex{},
+		connTime: time.Now().Unix(),
 	}
+}
+
+func cleanupLocalKeyValues(kv *localKeyValues) error {
+	if kv == nil {
+		return nil
+	}
+	for id := range kv.idx {
+		path := filepath.Join(kv.dir, id+kv.ext)
+		if _, err := os.Stat(path); err == nil {
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func TestConnectLocal(t *testing.T) {
@@ -181,4 +202,67 @@ func TestLocalKeyValues_IsModifiedAfter(t *testing.T) {
 			testo.EqualValues(t, kv.IsModifiedAfter(tt.key, tt.after), tt.exp)
 		})
 	}
+}
+
+func TestLocalKeyValues_IndexCurrentModTime(t *testing.T) {
+	start := time.Now().Unix()
+
+	kv := mockLocalKeyValues()
+	testo.Error(t, kv.idx.write(os.TempDir()), false)
+
+	imt, err := kv.IndexCurrentModTime()
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, imt, start, testo.GreaterOrEqual)
+
+	testo.Error(t, indexCleanup(), false)
+}
+
+func TestLocalKeyValues_CurrentModTime(t *testing.T) {
+	start := time.Now().Unix()
+
+	kv := mockLocalKeyValues()
+
+	testo.Error(t, kv.Set("test", strings.NewReader("test")), false)
+
+	cmt, err := kv.CurrentModTime("1")
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, cmt, start, testo.Less)
+
+	cmt, err = kv.CurrentModTime("test")
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, cmt, start, testo.GreaterOrEqual)
+
+	cmt, err = kv.CurrentModTime("2")
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, cmt, start, testo.Less)
+
+	testo.Error(t, cleanupLocalKeyValues(kv), false)
+}
+
+func TestLocalKeyValues_IndexRefresh(t *testing.T) {
+	kv := mockLocalKeyValues()
+	testo.Error(t, kv.idx.write(os.TempDir()), false)
+
+	// first test: reset connection time, clear index
+	// expected result: index refresh will reload, setting connection time and index
+
+	kv.idx = make(index)
+	kv.connTime = 0
+	testo.EqualValues(t, len(kv.idx), 0)
+
+	testo.Error(t, kv.IndexRefresh(), false)
+	testo.CompareInt64(t, kv.connTime, 0, testo.Greater)
+	testo.CompareInt64(t, int64(len(kv.idx)), 0, testo.Greater)
+
+	// second test: clear index, but don't reset connection time
+	// expected result: index refresh won't do anything and index will remain empty
+	// because connection time didn't changed and there's no need to reload index
+
+	kv.idx = make(index)
+	testo.EqualValues(t, len(kv.idx), 0)
+
+	testo.Error(t, kv.IndexRefresh(), false)
+	testo.EqualValues(t, len(kv.idx), 0)
+
+	testo.Error(t, indexCleanup(), false)
 }
