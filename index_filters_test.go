@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var tmtx = sync.Mutex{}
+var tmtx = &sync.Mutex{}
 
 func TestIndexKeys(t *testing.T) {
 	idx := mockIndex()

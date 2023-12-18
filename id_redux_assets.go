@@ -137,11 +137,11 @@ func (irap *IRAProxy) Match(query map[string][]string, anyCase, contains bool) m
 	return nil
 }
 
-func (irap *IRAProxy) RefreshReduxAssets() (ReduxAssets, error) {
-	return irap, nil
+func (irap *IRAProxy) Refresh() error {
+	return nil
 }
 
-func (irap *IRAProxy) ReduxAssetsModTime() (int64, error) {
+func (irap *IRAProxy) ModTime() (int64, error) {
 	return irap.modTime, nil
 }
 
