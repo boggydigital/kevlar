@@ -32,7 +32,7 @@ type MatchOption int
 
 const (
 	CaseSensitive = iota
-	FullMatchOnly
+	FullMatch
 )
 
 func (rdx *Redux) Match(query map[string][]string, options ...MatchOption) []string {
@@ -52,7 +52,7 @@ func anyValueMatchesTerm(term string, values []string, options ...MatchOption) b
 
 	if options != nil {
 		anyCase = !slices.Contains(options, CaseSensitive)
-		contains = !slices.Contains(options, FullMatchOnly)
+		contains = !slices.Contains(options, FullMatch)
 	}
 
 	for _, val := range values {

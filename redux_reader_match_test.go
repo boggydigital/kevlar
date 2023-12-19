@@ -1,66 +1,96 @@
 package kvas
 
-import "testing"
+import (
+	"github.com/boggydigital/testo"
+	"sort"
+	"strconv"
+	"testing"
+)
+
+var matchableAKV = map[string]map[string][]string{
+	"t": {
+		"1": []string{"title"},
+		"2": []string{"title1"},
+		"3": []string{"TITLE2"},
+	},
+	"v": {
+		"1": []string{"VALUE1"},
+		"2": []string{"value"},
+		"3": []string{"value2"},
+	},
+}
 
 func TestRedux_MatchAsset(t *testing.T) {
 
+	limitedScope := []string{"2", "3"}
+
+	tests := []struct {
+		asset   string
+		terms   []string
+		scope   []string
+		options []MatchOption
+		exp     []string // expected results should be a-z sorted
+	}{
+		{"", nil, nil, nil, []string{}},
+
+		{"t", []string{"title"}, nil, nil, []string{"1", "2", "3"}},
+		{"t", []string{"title"}, nil, []MatchOption{CaseSensitive}, []string{"1", "2"}},
+		{"t", []string{"title"}, nil, []MatchOption{FullMatch}, []string{"1"}},
+		{"t", []string{"title"}, nil, []MatchOption{CaseSensitive, FullMatch}, []string{"1"}},
+
+		{"t", []string{"title"}, limitedScope, nil, []string{"2", "3"}},
+		{"t", []string{"title"}, limitedScope, []MatchOption{CaseSensitive}, []string{"2"}},
+		{"t", []string{"title"}, limitedScope, []MatchOption{FullMatch}, []string{}},
+		{"t", []string{"title"}, limitedScope, []MatchOption{CaseSensitive, FullMatch}, []string{}},
+	}
+
+	rdx := &Redux{assetKeyValues: matchableAKV}
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			found := rdx.MatchAsset(tt.asset, tt.terms, tt.scope, tt.options...)
+			// pre-sorting results to avoid comparing same arrays just in different order
+			sort.Strings(found)
+			testo.DeepEqual(t, found, tt.exp)
+		})
+	}
 }
 
-//func TestAnyValueMatchesTerm(t *testing.T) {
-//	tests := []struct {
-//		term     string
-//		values   []string
-//		anyCase  bool
-//		contains bool
-//		ok       bool
-//	}{
-//		{"test", []string{"nomatch", "prefixTEST"}, false, false, false},
-//		{"prefixTEST", []string{"nomatch", "prefixTEST"}, false, false, true},
-//		{"test", []string{"nomatch", "prefixTEST"}, true, false, false},
-//		{"prefixtest", []string{"nomatch", "prefixTEST"}, true, false, true},
-//		{"test", []string{"nomatch", "prefixTEST"}, false, true, false},
-//		{"test", []string{"nomatch", "prefixTEST"}, true, true, true},
-//		{"test", []string{"nomatch"}, true, true, false},
-//	}
-//
-//	for ii, tt := range tests {
-//		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-//			ok := anyValueMatchesTerm(tt.term, tt.values, tt.anyCase, tt.contains)
-//			testo.EqualValues(t, ok, tt.ok)
-//		})
-//	}
-//}
-//
-//func TestReduxMatch(t *testing.T) {
-//	tests := []struct {
-//		terms    []string
-//		scope    map[string]bool
-//		anyCase  bool
-//		contains bool
-//		matches  []string
-//	}{
-//		{[]string{"11"}, nil, false, false, []string{}},
-//		{[]string{"11"}, nil, false, true, []string{"k2"}},
-//		{[]string{"11"}, nil, true, true, []string{"k2"}},
-//		{[]string{"11"}, map[string]bool{"k1": true, "k3": true}, true, true, []string{}},
-//		{[]string{"V12"}, nil, false, false, []string{}},
-//		{[]string{"V12"}, nil, true, false, []string{"k2"}},
-//		{[]string{"V12"}, nil, false, true, []string{}},
-//		{[]string{"V12"}, nil, true, true, []string{"k2", "k3", "k4"}},
-//		{[]string{"V12"}, map[string]bool{"k4": true, "k5": true}, true, true, []string{"k4"}},
-//	}
-//
-//	rdx := mockRedux()
-//
-//	for ii, tt := range tests {
-//		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-//
-//			matches := rdx.Match(tt.terms, tt.scope, tt.anyCase, tt.contains)
-//			testo.EqualValues(t, len(matches), len(tt.matches))
-//			for _, m := range tt.matches {
-//				_, ok := matches[m]
-//				testo.EqualValues(t, ok, true)
-//			}
-//		})
-//	}
-//}
+func TestRedux_Match(t *testing.T) {
+	tests := []struct {
+		query   map[string][]string
+		options []MatchOption
+		exp     []string // expected results should be a-z sorted
+	}{
+		{nil, nil, nil},
+
+		{map[string][]string{"t": {"title"}}, nil, []string{"1", "2", "3"}},
+		{map[string][]string{"t": {"title"}}, []MatchOption{CaseSensitive}, []string{"1", "2"}},
+		{map[string][]string{"t": {"title"}}, []MatchOption{FullMatch}, []string{"1"}},
+		{map[string][]string{"t": {"title"}}, []MatchOption{CaseSensitive, FullMatch}, []string{"1"}},
+
+		{map[string][]string{"v": {"value"}}, nil, []string{"1", "2", "3"}},
+		{map[string][]string{"v": {"value"}}, []MatchOption{CaseSensitive}, []string{"2", "3"}},
+		{map[string][]string{"v": {"value"}}, []MatchOption{FullMatch}, []string{"2"}},
+		{map[string][]string{"v": {"value"}}, []MatchOption{CaseSensitive, FullMatch}, []string{"2"}},
+
+		{map[string][]string{"t": {""}, "v": {"value"}}, nil, []string{"1", "2", "3"}},
+		{map[string][]string{"t": {"title"}, "v": {""}}, nil, []string{"1", "2", "3"}},
+
+		{map[string][]string{"t": {"title-that-doesnt-exist"}, "v": {"value"}}, nil, []string{}},
+		{map[string][]string{"t": {"title"}, "v": {"value-that-doesnt-exist"}}, nil, []string{}},
+
+		{map[string][]string{"t": {"title"}, "v": {"value"}}, nil, []string{"1", "2", "3"}},
+		{map[string][]string{"t": {"title"}, "v": {"value"}}, []MatchOption{CaseSensitive}, []string{"2"}},
+		{map[string][]string{"t": {"title"}, "v": {"value"}}, []MatchOption{FullMatch}, []string{}},
+	}
+
+	rdx := &Redux{assetKeyValues: matchableAKV}
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			found := rdx.Match(tt.query, tt.options...)
+			// pre-sorting results to avoid comparing same arrays just in different order
+			sort.Strings(found)
+			testo.DeepEqual(t, found, tt.exp)
+		})
+	}
+}
