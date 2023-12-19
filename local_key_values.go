@@ -3,6 +3,7 @@ package kvas
 import (
 	"bytes"
 	"fmt"
+	"github.com/boggydigital/nod"
 	"io"
 	"os"
 	"path/filepath"
@@ -214,19 +215,31 @@ func (lkv *localKeyValues) IndexRefresh() error {
 	return nil
 }
 
-func (lkv *localKeyValues) VetIndexOnly(fix bool) ([]string, error) {
+func (lkv *localKeyValues) VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
 	indexOnly := make([]string, 0)
 	indexModified := false
 
-	for _, key := range lkv.Keys() {
+	keys := lkv.Keys()
+
+	if tpw != nil {
+		tpw.TotalInt(len(keys))
+	}
+
+	for _, key := range keys {
 		valAbsPath := lkv.valuePath(key)
 		if _, err := os.Stat(valAbsPath); err == nil {
+			if tpw != nil {
+				tpw.Increment()
+			}
 			continue
 		}
 		indexOnly = append(indexOnly, key)
 		if fix {
 			delete(lkv.idx, key)
 			indexModified = true
+		}
+		if tpw != nil {
+			tpw.Increment()
 		}
 	}
 
@@ -239,12 +252,16 @@ func (lkv *localKeyValues) VetIndexOnly(fix bool) ([]string, error) {
 	return indexOnly, nil
 }
 
-func (lkv *localKeyValues) VetIndexMissing(fix bool) ([]string, error) {
+func (lkv *localKeyValues) VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
 	indexMissing := make([]string, 0)
 
 	filenames, err := filepath.Glob("*" + lkv.ext)
 	if err != nil {
 		return nil, err
+	}
+
+	if tpw != nil {
+		tpw.TotalInt(len(filenames))
 	}
 
 	for _, fn := range filenames {
@@ -253,18 +270,29 @@ func (lkv *localKeyValues) VetIndexMissing(fix bool) ([]string, error) {
 			indexMissing = append(indexMissing, key)
 			if fix {
 				valAbsPath := lkv.valuePath(key)
-				f, err := os.Open(valAbsPath)
-				if err != nil {
+				if err := openSetValue(key, valAbsPath, lkv); err != nil {
 					return nil, err
 				}
-				if err := lkv.Set(key, f); err != nil {
-					f.Close()
-					return nil, err
-				}
-				f.Close()
+			}
+			if tpw != nil {
+				tpw.Increment()
 			}
 		}
 	}
 
 	return indexMissing, nil
+}
+
+func openSetValue(key, path string, lkv *localKeyValues) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if err := lkv.Set(key, f); err != nil {
+		return err
+	}
+
+	return nil
 }

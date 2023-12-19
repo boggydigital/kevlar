@@ -1,10 +1,13 @@
 package kvas
 
-import "io"
+import (
+	"github.com/boggydigital/nod"
+	"io"
+)
 
 type IndexVetter interface {
-	VetIndexOnly(fix bool) ([]string, error)
-	VetIndexMissing(fix bool) ([]string, error)
+	VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error)
+	VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error)
 }
 
 type KeyValues interface {
