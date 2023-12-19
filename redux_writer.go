@@ -10,7 +10,7 @@ func ReduxWriter(dir string, assets ...string) (WriteableRedux, error) {
 	return connectRedux(dir, assets...)
 }
 
-func (rdx *Redux) addValues(asset, key string, values ...string) error {
+func (rdx *redux) addValues(asset, key string, values ...string) error {
 	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
@@ -24,14 +24,14 @@ func (rdx *Redux) addValues(asset, key string, values ...string) error {
 	return nil
 }
 
-func (rdx *Redux) AddValues(asset, key string, values ...string) error {
+func (rdx *redux) AddValues(asset, key string, values ...string) error {
 	if err := rdx.addValues(asset, key, values...); err != nil {
 		return err
 	}
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) BatchAddValues(asset string, keyValues map[string][]string) error {
+func (rdx *redux) BatchAddValues(asset string, keyValues map[string][]string) error {
 	for key, values := range keyValues {
 		if err := rdx.addValues(asset, key, values...); err != nil {
 			return err
@@ -40,7 +40,7 @@ func (rdx *Redux) BatchAddValues(asset string, keyValues map[string][]string) er
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) replaceValues(asset, key string, values ...string) error {
+func (rdx *redux) replaceValues(asset, key string, values ...string) error {
 	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
@@ -48,14 +48,14 @@ func (rdx *Redux) replaceValues(asset, key string, values ...string) error {
 	return nil
 }
 
-func (rdx *Redux) ReplaceValues(asset, key string, values ...string) error {
+func (rdx *redux) ReplaceValues(asset, key string, values ...string) error {
 	if err := rdx.replaceValues(asset, key, values...); err != nil {
 		return err
 	}
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) BatchReplaceValues(asset string, keyValues map[string][]string) error {
+func (rdx *redux) BatchReplaceValues(asset string, keyValues map[string][]string) error {
 	if len(keyValues) == 0 {
 		return nil
 	}
@@ -67,7 +67,7 @@ func (rdx *Redux) BatchReplaceValues(asset string, keyValues map[string][]string
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) cutValues(asset, key string, values ...string) error {
+func (rdx *redux) cutValues(asset, key string, values ...string) error {
 	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
@@ -93,14 +93,14 @@ func (rdx *Redux) cutValues(asset, key string, values ...string) error {
 	return nil
 }
 
-func (rdx *Redux) CutValues(asset, key string, values ...string) error {
+func (rdx *redux) CutValues(asset, key string, values ...string) error {
 	if err := rdx.cutValues(asset, key, values...); err != nil {
 		return err
 	}
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) BatchCutValues(asset string, keyValues map[string][]string) error {
+func (rdx *redux) BatchCutValues(asset string, keyValues map[string][]string) error {
 	if len(keyValues) == 0 {
 		return nil
 	}
@@ -112,7 +112,7 @@ func (rdx *Redux) BatchCutValues(asset string, keyValues map[string][]string) er
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) BatchCutKeys(asset string, keys []string) error {
+func (rdx *redux) BatchCutKeys(asset string, keys []string) error {
 	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
@@ -126,7 +126,7 @@ func (rdx *Redux) BatchCutKeys(asset string, keys []string) error {
 	return rdx.write(asset)
 }
 
-func (rdx *Redux) write(asset string) error {
+func (rdx *redux) write(asset string) error {
 	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
@@ -139,6 +139,6 @@ func (rdx *Redux) write(asset string) error {
 	return rdx.kv.Set(asset, buf)
 }
 
-func (rdx *Redux) RefreshWriter() (WriteableRedux, error) {
+func (rdx *redux) RefreshWriter() (WriteableRedux, error) {
 	return rdx.refresh()
 }

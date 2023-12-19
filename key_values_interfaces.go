@@ -2,6 +2,11 @@ package kvas
 
 import "io"
 
+type IndexVetter interface {
+	VetIndexOnly(fix bool) ([]string, error)
+	VetIndexMissing(fix bool) ([]string, error)
+}
+
 type KeyValues interface {
 	Has(key string) bool
 	Get(key string) (io.ReadCloser, error)
@@ -17,4 +22,6 @@ type KeyValues interface {
 	IndexCurrentModTime() (int64, error)
 	CurrentModTime(key string) (int64, error)
 	IndexRefresh() error
+
+	IndexVetter
 }

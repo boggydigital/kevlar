@@ -29,6 +29,3 @@ type WriteableRedux interface {
 	BatchCutKeys(asset string, keys []string) error
 	RefreshWriter() (WriteableRedux, error)
 }
-
-type FixableRedux interface {
-}

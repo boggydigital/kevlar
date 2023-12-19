@@ -30,7 +30,7 @@ func (is *sortableIdSet) Less(i, j int) bool {
 	return false
 }
 
-func (rdx *Redux) Sort(ids []string, desc bool, sortBy ...string) ([]string, error) {
+func (rdx *redux) Sort(ids []string, desc bool, sortBy ...string) ([]string, error) {
 	if err := rdx.MustHave(sortBy...); err != nil {
 		return nil, err
 	}

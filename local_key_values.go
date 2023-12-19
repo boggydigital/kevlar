@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -211,4 +212,59 @@ func (lkv *localKeyValues) IndexRefresh() error {
 	}
 
 	return nil
+}
+
+func (lkv *localKeyValues) VetIndexOnly(fix bool) ([]string, error) {
+	indexOnly := make([]string, 0)
+	indexModified := false
+
+	for _, key := range lkv.Keys() {
+		valAbsPath := lkv.valuePath(key)
+		if _, err := os.Stat(valAbsPath); err == nil {
+			continue
+		}
+		indexOnly = append(indexOnly, key)
+		if fix {
+			delete(lkv.idx, key)
+			indexModified = true
+		}
+	}
+
+	if indexModified {
+		if err := lkv.idx.write(lkv.dir); err != nil {
+			return nil, err
+		}
+	}
+
+	return indexOnly, nil
+}
+
+func (lkv *localKeyValues) VetIndexMissing(fix bool) ([]string, error) {
+	indexMissing := make([]string, 0)
+
+	filenames, err := filepath.Glob("*" + lkv.ext)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fn := range filenames {
+		key := strings.TrimSuffix(fn, lkv.ext)
+		if _, ok := lkv.idx[key]; !ok {
+			indexMissing = append(indexMissing, key)
+			if fix {
+				valAbsPath := lkv.valuePath(key)
+				f, err := os.Open(valAbsPath)
+				if err != nil {
+					return nil, err
+				}
+				if err := lkv.Set(key, f); err != nil {
+					f.Close()
+					return nil, err
+				}
+				f.Close()
+			}
+		}
+	}
+
+	return indexMissing, nil
 }

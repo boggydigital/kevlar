@@ -12,7 +12,7 @@ func UnknownReduxAsset(asset string) error {
 	return errors.New("unknown redux asset " + asset)
 }
 
-type Redux struct {
+type redux struct {
 	dir            string
 	kv             KeyValues
 	assetKeyValues map[string]map[string][]string
@@ -20,7 +20,7 @@ type Redux struct {
 	mtx            *sync.Mutex
 }
 
-func connectRedux(dir string, assets ...string) (*Redux, error) {
+func connectRedux(dir string, assets ...string) (*redux, error) {
 	kv, err := ConnectLocal(dir, GobExt)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func connectRedux(dir string, assets ...string) (*Redux, error) {
 		}
 	}
 
-	return &Redux{
+	return &redux{
 		kv:             kv,
 		dir:            dir,
 		assetKeyValues: assetKeyValues,

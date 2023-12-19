@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (rdx *Redux) MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string {
+func (rdx *redux) MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string {
 	if scope == nil {
 		scope = rdx.Keys(asset)
 	}
@@ -35,7 +35,7 @@ const (
 	FullMatch
 )
 
-func (rdx *Redux) Match(query map[string][]string, options ...MatchOption) []string {
+func (rdx *redux) Match(query map[string][]string, options ...MatchOption) []string {
 	var matches []string
 	for asset, terms := range query {
 		if !rdx.HasAsset(asset) {

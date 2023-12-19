@@ -23,8 +23,8 @@ func reduxCleanup(assets ...string) error {
 	return indexCleanup()
 }
 
-func mockRedux() *Redux {
-	return &Redux{
+func mockRedux() *redux {
+	return &redux{
 		dir: os.TempDir(),
 		assetKeyValues: map[string]map[string][]string{
 			"a1": {

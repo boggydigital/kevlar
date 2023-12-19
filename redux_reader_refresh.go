@@ -2,11 +2,11 @@ package kvas
 
 import "golang.org/x/exp/maps"
 
-func (rdx *Redux) assetModTime(asset string) (int64, error) {
+func (rdx *redux) assetModTime(asset string) (int64, error) {
 	return rdx.kv.CurrentModTime(asset)
 }
 
-func (rdx *Redux) ModTime() (int64, error) {
+func (rdx *redux) ModTime() (int64, error) {
 	rdx.mtx.Lock()
 	defer rdx.mtx.Unlock()
 
@@ -23,7 +23,7 @@ func (rdx *Redux) ModTime() (int64, error) {
 	return mt, nil
 }
 
-func (rdx *Redux) refresh() (*Redux, error) {
+func (rdx *redux) refresh() (*redux, error) {
 	if err := rdx.kv.IndexRefresh(); err != nil {
 		return rdx, err
 	}
@@ -40,6 +40,6 @@ func (rdx *Redux) refresh() (*Redux, error) {
 	return rdx, nil
 }
 
-func (rdx *Redux) RefreshReader() (ReadableRedux, error) {
+func (rdx *redux) RefreshReader() (ReadableRedux, error) {
 	return rdx.refresh()
 }

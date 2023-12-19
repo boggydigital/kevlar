@@ -41,7 +41,7 @@ func TestRedux_RefreshReader(t *testing.T) {
 	testo.Error(t, err, false)
 
 	var ok bool
-	rdx, ok = rrdx.(*Redux)
+	rdx, ok = rrdx.(*redux)
 	testo.EqualValues(t, ok, true)
 
 	testo.CompareInt64(t, rdx.modTime, -1, testo.Greater)
@@ -54,7 +54,7 @@ func TestRedux_RefreshReader(t *testing.T) {
 	rrdx, err = rdx.RefreshReader()
 	testo.Error(t, err, false)
 
-	rdx, ok = rrdx.(*Redux)
+	rdx, ok = rrdx.(*redux)
 	testo.EqualValues(t, ok, true)
 
 	testo.EqualValues(t, rdx.modTime, startModTime)

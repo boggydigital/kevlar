@@ -1,7 +1,7 @@
 package kvas
 
 var (
-	_ ReadableRedux  = (*Redux)(nil)
-	_ WriteableRedux = (*Redux)(nil)
-	_ FixableRedux   = (*Redux)(nil)
+	_ ReadableRedux  = (*redux)(nil)
+	_ WriteableRedux = (*redux)(nil)
+	_ IndexVetter    = (*redux)(nil)
 )

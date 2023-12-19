@@ -44,7 +44,7 @@ func TestRedux_MatchAsset(t *testing.T) {
 		{"t", []string{"title"}, limitedScope, []MatchOption{CaseSensitive, FullMatch}, []string{}},
 	}
 
-	rdx := &Redux{assetKeyValues: matchableAKV}
+	rdx := &redux{assetKeyValues: matchableAKV}
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
 			found := rdx.MatchAsset(tt.asset, tt.terms, tt.scope, tt.options...)
@@ -84,7 +84,7 @@ func TestRedux_Match(t *testing.T) {
 		{map[string][]string{"t": {"title"}, "v": {"value"}}, []MatchOption{FullMatch}, []string{}},
 	}
 
-	rdx := &Redux{assetKeyValues: matchableAKV}
+	rdx := &redux{assetKeyValues: matchableAKV}
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
 			found := rdx.Match(tt.query, tt.options...)

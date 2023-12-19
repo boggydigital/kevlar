@@ -7,7 +7,7 @@ import (
 	"sort"
 )
 
-func (rdx *Redux) Export(w io.Writer, assets ...string) error {
+func (rdx *redux) Export(w io.Writer, assets ...string) error {
 
 	if len(assets) == 0 {
 		assets = maps.Keys(rdx.assetKeyValues)
