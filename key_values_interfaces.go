@@ -1,74 +1,30 @@
 package kvas
 
-import "io"
+import (
+	"github.com/boggydigital/nod"
+	"io"
+)
 
-type PresenceChecker interface {
-	Has(key string) bool
-}
-
-type Getter interface {
-	Get(key string) (io.ReadCloser, error)
-	GetFromStorage(key string) (io.ReadCloser, error)
-}
-
-type Setter interface {
-	Set(key string, data io.Reader) error
-}
-
-type Cutter interface {
-	Cut(key string) (bool, error)
-}
-
-type KeyValuesEditor interface {
-	PresenceChecker
-	Getter
-	Setter
-	Cutter
-}
-
-type KeysEnumerator interface {
-	Keys() []string
-}
-
-type CreatedAfterFilter interface {
-	CreatedAfter(timestamp int64) []string
-}
-
-type ModifiedAfterFilter interface {
-	ModifiedAfter(timestamp int64, strictlyModified bool) []string
-}
-
-type ModifiedAfterChecker interface {
-	IsModifiedAfter(key string, timestamp int64) bool
-}
-
-type KeyValuesFilter interface {
-	KeysEnumerator
-	CreatedAfterFilter
-	ModifiedAfterFilter
-	ModifiedAfterChecker
-}
-
-type IndexModTimeGetter interface {
-	IndexCurrentModTime() (int64, error)
-}
-
-type ModTimeGetter interface {
-	CurrentModTime(key string) (int64, error)
-}
-
-type IndexRefresher interface {
-	IndexRefresh() error
-}
-
-type KeyValuesRefresher interface {
-	IndexModTimeGetter
-	ModTimeGetter
-	IndexRefresher
+type IndexVetter interface {
+	VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error)
+	VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error)
 }
 
 type KeyValues interface {
-	KeyValuesEditor
-	KeyValuesFilter
-	KeyValuesRefresher
+	Has(key string) bool
+	Get(key string) (io.ReadCloser, error)
+	GetFromStorage(key string) (io.ReadCloser, error)
+	Set(key string, data io.Reader) error
+	Cut(key string) (bool, error)
+
+	Keys() []string
+	CreatedAfter(timestamp int64) []string
+	ModifiedAfter(timestamp int64, strictlyModified bool) []string
+	IsModifiedAfter(key string, timestamp int64) bool
+
+	IndexCurrentModTime() (int64, error)
+	CurrentModTime(key string) (int64, error)
+	IndexRefresh() error
+
+	IndexVetter
 }

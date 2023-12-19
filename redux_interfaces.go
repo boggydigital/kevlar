@@ -1,51 +1,31 @@
 package kvas
 
-type ValueEditor interface {
-	AddValues(key string, values ...string) error
-	ReplaceValues(key string, values ...string) error
-	CutVal(key string, val string) error
+import "io"
+
+type ReadableRedux interface {
+	MustHave(assets ...string) error
+	Keys(asset string) []string
+	HasAsset(asset string) bool
+	HasKey(asset, key string) bool
+	HasValue(asset, key, val string) bool
+	GetAllValues(asset, key string) ([]string, bool)
+	GetFirstVal(asset, key string) (string, bool)
+	ModTime() (int64, error)
+	RefreshReader() (ReadableRedux, error)
+	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
+	Match(query map[string][]string, options ...MatchOption) []string
+	Sort(ids []string, desc bool, sortBy ...string) ([]string, error)
+	Export(w io.Writer, assets ...string) error
 }
 
-type BatchValueEditor interface {
-	BatchAddValues(keysValues map[string][]string) error
-	BatchReplaceValues(keysValues map[string][]string) error
-	BatchCutKeys(keys []string) error
-	BatchCutValues(keysValues map[string][]string) error
-}
-
-type ValueChecker interface {
-	HasVal(key string, val string) bool
-}
-
-type AllValuesGetter interface {
-	GetAllValues(key string) ([]string, bool)
-}
-
-type FirstValueGetter interface {
-	GetFirstVal(key string) (string, bool)
-}
-
-type TermsMatcher interface {
-	Match(terms []string, scope map[string]bool, anyCase bool, contains bool) map[string]bool
-}
-
-type ValueReader interface {
-	KeysEnumerator
-	PresenceChecker
-	ValueChecker
-	AllValuesGetter
-	FirstValueGetter
-	TermsMatcher
-}
-
-type ReduxRefresher interface {
-	RefreshReduxValues() (ReduxValues, error)
-	ReduxModTime() (int64, error)
-}
-
-type ReduxValues interface {
-	ValueEditor
-	BatchValueEditor
-	ValueReader
-	ReduxRefresher
+type WriteableRedux interface {
+	ReadableRedux
+	AddValues(asset, key string, values ...string) error
+	BatchAddValues(asset string, keyValues map[string][]string) error
+	ReplaceValues(asset, key string, values ...string) error
+	BatchReplaceValues(asset string, keyValues map[string][]string) error
+	CutValues(asset, key string, values ...string) error
+	BatchCutValues(asset string, keyValues map[string][]string) error
+	BatchCutKeys(asset string, keys []string) error
+	RefreshWriter() (WriteableRedux, error)
 }

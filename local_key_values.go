@@ -3,9 +3,11 @@ package kvas
 import (
 	"bytes"
 	"fmt"
+	"github.com/boggydigital/nod"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -14,7 +16,7 @@ type localKeyValues struct {
 	dir      string
 	ext      string
 	idx      index
-	mtx      sync.Mutex
+	mtx      *sync.Mutex
 	connTime int64
 }
 
@@ -43,7 +45,7 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 		dir: dir,
 		ext: ext,
 		idx: make(index),
-		mtx: sync.Mutex{},
+		mtx: &sync.Mutex{},
 	}
 	err := kv.idx.read(kv.dir)
 
@@ -207,6 +209,89 @@ func (lkv *localKeyValues) IndexRefresh() error {
 		if err := lkv.idx.read(lkv.dir); err != nil {
 			return err
 		}
+		lkv.connTime = indexModTime
+	}
+
+	return nil
+}
+
+func (lkv *localKeyValues) VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
+	indexOnly := make([]string, 0)
+	indexModified := false
+
+	keys := lkv.Keys()
+
+	if tpw != nil {
+		tpw.TotalInt(len(keys))
+	}
+
+	for _, key := range keys {
+		valAbsPath := lkv.valuePath(key)
+		if _, err := os.Stat(valAbsPath); err == nil {
+			if tpw != nil {
+				tpw.Increment()
+			}
+			continue
+		}
+		indexOnly = append(indexOnly, key)
+		if fix {
+			delete(lkv.idx, key)
+			indexModified = true
+		}
+		if tpw != nil {
+			tpw.Increment()
+		}
+	}
+
+	if indexModified {
+		if err := lkv.idx.write(lkv.dir); err != nil {
+			return nil, err
+		}
+	}
+
+	return indexOnly, nil
+}
+
+func (lkv *localKeyValues) VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
+	indexMissing := make([]string, 0)
+
+	filenames, err := filepath.Glob("*" + lkv.ext)
+	if err != nil {
+		return nil, err
+	}
+
+	if tpw != nil {
+		tpw.TotalInt(len(filenames))
+	}
+
+	for _, fn := range filenames {
+		key := strings.TrimSuffix(fn, lkv.ext)
+		if _, ok := lkv.idx[key]; !ok {
+			indexMissing = append(indexMissing, key)
+			if fix {
+				valAbsPath := lkv.valuePath(key)
+				if err := openSetValue(key, valAbsPath, lkv); err != nil {
+					return nil, err
+				}
+			}
+			if tpw != nil {
+				tpw.Increment()
+			}
+		}
+	}
+
+	return indexMissing, nil
+}
+
+func openSetValue(key, path string, lkv *localKeyValues) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if err := lkv.Set(key, f); err != nil {
+		return err
 	}
 
 	return nil
