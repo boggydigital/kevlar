@@ -13,7 +13,7 @@ func TestReduxWriteConnect(t *testing.T) {
 
 		testo.Error(t, wrdx.write(asset), false)
 
-		rdx, err := ReduxReader(os.TempDir(), asset)
+		rdx, err := NewReduxReader(os.TempDir(), asset)
 		testo.Error(t, err, false)
 		testo.Nil(t, rdx, false)
 

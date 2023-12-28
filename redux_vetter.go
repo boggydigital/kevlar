@@ -2,7 +2,7 @@ package kvas
 
 import "github.com/boggydigital/nod"
 
-func ReduxVetter(dir string, assets ...string) (IndexVetter, error) {
+func NewReduxVetter(dir string, assets ...string) (IndexVetter, error) {
 	return connectRedux(dir, assets...)
 }
 

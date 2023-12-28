@@ -5,7 +5,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func ReduxReader(dir string, assets ...string) (ReadableRedux, error) {
+func NewReduxReader(dir string, assets ...string) (ReadableRedux, error) {
 	return connectRedux(dir, assets...)
 }
 

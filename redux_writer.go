@@ -6,7 +6,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func ReduxWriter(dir string, assets ...string) (WriteableRedux, error) {
+func NewReduxWriter(dir string, assets ...string) (WriteableRedux, error) {
 	return connectRedux(dir, assets...)
 }
 
