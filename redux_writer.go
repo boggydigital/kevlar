@@ -100,19 +100,7 @@ func (rdx *redux) CutValues(asset, key string, values ...string) error {
 	return rdx.write(asset)
 }
 
-func (rdx *redux) BatchCutValues(asset string, keyValues map[string][]string) error {
-	if len(keyValues) == 0 {
-		return nil
-	}
-	for key, values := range keyValues {
-		if err := rdx.cutValues(asset, key, values...); err != nil {
-			return err
-		}
-	}
-	return rdx.write(asset)
-}
-
-func (rdx *redux) BatchCutKeys(asset string, keys []string) error {
+func (rdx *redux) CutKeys(asset string, keys ...string) error {
 	if !rdx.HasAsset(asset) {
 		return UnknownReduxAsset(asset)
 	}
@@ -122,6 +110,18 @@ func (rdx *redux) BatchCutKeys(asset string, keys []string) error {
 
 	for _, key := range keys {
 		delete(rdx.assetKeyValues[asset], key)
+	}
+	return rdx.write(asset)
+}
+
+func (rdx *redux) BatchCutValues(asset string, keyValues map[string][]string) error {
+	if len(keyValues) == 0 {
+		return nil
+	}
+	for key, values := range keyValues {
+		if err := rdx.cutValues(asset, key, values...); err != nil {
+			return err
+		}
 	}
 	return rdx.write(asset)
 }

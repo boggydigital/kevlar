@@ -14,6 +14,7 @@ type record struct {
 	Hash     string `json:"hash"`
 	Created  int64  `json:"created"`
 	Modified int64  `json:"modified"`
+	//Removed  int64  `json:"removed"`
 }
 
 type index map[string]record

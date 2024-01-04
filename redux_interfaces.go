@@ -25,7 +25,7 @@ type WriteableRedux interface {
 	ReplaceValues(asset, key string, values ...string) error
 	BatchReplaceValues(asset string, keyValues map[string][]string) error
 	CutValues(asset, key string, values ...string) error
+	CutKeys(asset string, keys ...string) error
 	BatchCutValues(asset string, keyValues map[string][]string) error
-	BatchCutKeys(asset string, keys []string) error
 	RefreshWriter() (WriteableRedux, error)
 }
