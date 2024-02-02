@@ -66,3 +66,10 @@ func (rdx *redux) GetFirstVal(asset, key string) (string, bool) {
 	}
 	return "", false
 }
+
+func (rdx *redux) GetLastVal(asset, key string) (string, bool) {
+	if values, ok := rdx.GetAllValues(asset, key); ok && len(values) > 0 {
+		return values[len(values)-1], true
+	}
+	return "", false
+}
