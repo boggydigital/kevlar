@@ -24,6 +24,7 @@ const (
 	JsonExt = ".json"
 	GobExt  = ".gob"
 	HtmlExt = ".html"
+	XmlExt  = ".xml"
 )
 
 const dirPerm os.FileMode = 0755
@@ -36,6 +37,8 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 	case GobExt:
 		fallthrough
 	case HtmlExt:
+		fallthrough
+	case XmlExt:
 		//do nothing
 	default:
 		return nil, fmt.Errorf("unknown extension %s", ext)
