@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/boggydigital/nod"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -82,6 +83,7 @@ func (lkv *localKeyValues) GetFromStorage(key string) (io.ReadCloser, error) {
 }
 
 func (lkv *localKeyValues) valuePath(key string) string {
+	key = url.PathEscape(key)
 	return filepath.Join(lkv.dir, key+lkv.ext)
 }
 
