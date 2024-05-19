@@ -1,6 +1,6 @@
 module github.com/boggydigital/kvas
 
-go 1.22
+go 1.22.3
 
 require (
 	github.com/boggydigital/testo v0.1.8
