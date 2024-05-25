@@ -27,7 +27,7 @@ func TestRedux_ModTime(t *testing.T) {
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, rmt, start, testo.GreaterOrEqual)
 
-	testo.Error(t, cleanupLocalKeyValues(rdx.kv.(*localKeyValues)), false)
+	testo.Error(t, cleanupLocalKeyValues(rdx.kv.(*keyValues)), false)
 }
 
 func TestRedux_RefreshReader(t *testing.T) {

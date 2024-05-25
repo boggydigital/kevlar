@@ -19,7 +19,7 @@ func (idx index) filter(f func(record) bool, mtx *sync.Mutex) []string {
 	return keys
 }
 
-// Keys returns all keys of a localKeyValues
+// Keys returns all keys of a keyValues
 func (idx index) Keys(mtx *sync.Mutex) []string {
 	return idx.filter(nil, mtx)
 }

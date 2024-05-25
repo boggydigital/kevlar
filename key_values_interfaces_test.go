@@ -1,3 +1,3 @@
 package kvas
 
-var _ KeyValues = (*localKeyValues)(nil)
+var _ KeyValues = (*keyValues)(nil)

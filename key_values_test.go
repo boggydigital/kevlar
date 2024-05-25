@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-func mockLocalKeyValues() *localKeyValues {
-	return &localKeyValues{
+func mockLocalKeyValues() *keyValues {
+	return &keyValues{
 		dir:      os.TempDir(),
 		ext:      GobExt,
 		idx:      mockIndex(),
@@ -24,7 +24,7 @@ func mockLocalKeyValues() *localKeyValues {
 	}
 }
 
-func cleanupLocalKeyValues(kv *localKeyValues) error {
+func cleanupLocalKeyValues(kv *keyValues) error {
 	if kv == nil {
 		return nil
 	}
@@ -56,7 +56,7 @@ func TestConnectLocal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ext, func(t *testing.T) {
-			lkv, err := ConnectLocal(os.TempDir(), tt.ext)
+			lkv, err := NewKeyValues(os.TempDir(), tt.ext)
 			testo.Nil(t, lkv, tt.expNil)
 			testo.Error(t, err, tt.expErr)
 
@@ -77,7 +77,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			lkv, err := ConnectLocal(os.TempDir(), GobExt)
+			lkv, err := NewKeyValues(os.TempDir(), GobExt)
 			testo.Nil(t, lkv, false)
 			testo.Error(t, err, false)
 

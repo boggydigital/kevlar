@@ -21,7 +21,7 @@ type redux struct {
 }
 
 func connectRedux(dir string, assets ...string) (*redux, error) {
-	kv, err := ConnectLocal(dir, GobExt)
+	kv, err := NewKeyValues(dir, GobExt)
 	if err != nil {
 		return nil, err
 	}

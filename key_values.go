@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type localKeyValues struct {
+type keyValues struct {
 	dir      string
 	ext      string
 	idx      index
@@ -30,7 +30,7 @@ const (
 
 const dirPerm os.FileMode = 0755
 
-func ConnectLocal(dir string, ext string) (KeyValues, error) {
+func NewKeyValues(dir string, ext string) (KeyValues, error) {
 
 	switch ext {
 	case JsonExt:
@@ -45,7 +45,7 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 		return nil, fmt.Errorf("unknown extension %s", ext)
 	}
 
-	kv := &localKeyValues{
+	kv := &keyValues{
 		dir: dir,
 		ext: ext,
 		idx: make(index),
@@ -59,7 +59,7 @@ func ConnectLocal(dir string, ext string) (KeyValues, error) {
 }
 
 // Has verifies if a value set contains provided key
-func (lkv *localKeyValues) Has(key string) bool {
+func (lkv *keyValues) Has(key string) bool {
 	lkv.mtx.Lock()
 	defer lkv.mtx.Unlock()
 
@@ -67,14 +67,14 @@ func (lkv *localKeyValues) Has(key string) bool {
 	return ok
 }
 
-func (lkv *localKeyValues) Get(key string) (io.ReadCloser, error) {
+func (lkv *keyValues) Get(key string) (io.ReadCloser, error) {
 	if !lkv.Has(key) {
 		return nil, nil
 	}
 	return lkv.GetFromStorage(key)
 }
 
-func (lkv *localKeyValues) GetFromStorage(key string) (io.ReadCloser, error) {
+func (lkv *keyValues) GetFromStorage(key string) (io.ReadCloser, error) {
 	valAbsPath := lkv.valuePath(key)
 	if _, err := os.Stat(valAbsPath); os.IsNotExist(err) {
 		return nil, nil
@@ -82,13 +82,13 @@ func (lkv *localKeyValues) GetFromStorage(key string) (io.ReadCloser, error) {
 	return os.Open(valAbsPath)
 }
 
-func (lkv *localKeyValues) valuePath(key string) string {
+func (lkv *keyValues) valuePath(key string) string {
 	key = url.PathEscape(key)
 	return filepath.Join(lkv.dir, key+lkv.ext)
 }
 
 // Set stores a bytes slice value by a provided key
-func (lkv *localKeyValues) Set(key string, reader io.Reader) error {
+func (lkv *keyValues) Set(key string, reader io.Reader) error {
 
 	var buf bytes.Buffer
 	tr := io.TeeReader(reader, &buf)
@@ -134,8 +134,8 @@ func (lkv *localKeyValues) Set(key string, reader io.Reader) error {
 	return lkv.idx.write(lkv.dir)
 }
 
-// Cut deletes value from localKeyValues by a provided key
-func (lkv *localKeyValues) Cut(key string) (bool, error) {
+// Cut deletes value from keyValues by a provided key
+func (lkv *keyValues) Cut(key string) (bool, error) {
 
 	if !lkv.Has(key) {
 		return false, nil
@@ -160,26 +160,26 @@ func (lkv *localKeyValues) Cut(key string) (bool, error) {
 	return true, lkv.idx.write(lkv.dir)
 }
 
-func (lkv *localKeyValues) Keys() []string {
+func (lkv *keyValues) Keys() []string {
 	return lkv.idx.Keys(lkv.mtx)
 }
 
 // CreatedAfter returns keys of values created on or after provided timestamp
-func (lkv *localKeyValues) CreatedAfter(timestamp int64) []string {
+func (lkv *keyValues) CreatedAfter(timestamp int64) []string {
 	return lkv.idx.CreatedAfter(timestamp, lkv.mtx)
 }
 
 // ModifiedAfter returns keys of values modified on or after provided timestamp
 // that were created earlier
-func (lkv *localKeyValues) ModifiedAfter(timestamp int64, strictlyModified bool) []string {
+func (lkv *keyValues) ModifiedAfter(timestamp int64, strictlyModified bool) []string {
 	return lkv.idx.ModifiedAfter(timestamp, strictlyModified, lkv.mtx)
 }
 
-func (lkv *localKeyValues) IsModifiedAfter(key string, timestamp int64) bool {
+func (lkv *keyValues) IsModifiedAfter(key string, timestamp int64) bool {
 	return lkv.idx.IsModifiedAfter(key, timestamp, lkv.mtx)
 }
 
-func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
+func (lkv *keyValues) IndexCurrentModTime() (int64, error) {
 	indexPath := indexPath(lkv.dir)
 	if stat, err := os.Stat(indexPath); os.IsNotExist(err) {
 		return -1, nil
@@ -190,7 +190,7 @@ func (lkv *localKeyValues) IndexCurrentModTime() (int64, error) {
 	}
 }
 
-func (lkv *localKeyValues) CurrentModTime(key string) (int64, error) {
+func (lkv *keyValues) CurrentModTime(key string) (int64, error) {
 	valuePath := lkv.valuePath(key)
 	if stat, err := os.Stat(valuePath); os.IsNotExist(err) {
 		return -1, nil
@@ -201,7 +201,7 @@ func (lkv *localKeyValues) CurrentModTime(key string) (int64, error) {
 	}
 }
 
-func (lkv *localKeyValues) IndexRefresh() error {
+func (lkv *keyValues) IndexRefresh() error {
 	indexModTime, err := lkv.IndexCurrentModTime()
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func (lkv *localKeyValues) IndexRefresh() error {
 	return nil
 }
 
-func (lkv *localKeyValues) VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
+func (lkv *keyValues) VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
 	indexOnly := make([]string, 0)
 	indexModified := false
 
@@ -257,7 +257,7 @@ func (lkv *localKeyValues) VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) (
 	return indexOnly, nil
 }
 
-func (lkv *localKeyValues) VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
+func (lkv *keyValues) VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
 	indexMissing := make([]string, 0)
 
 	filenames, err := filepath.Glob("*" + lkv.ext)
@@ -288,7 +288,7 @@ func (lkv *localKeyValues) VetIndexMissing(fix bool, tpw nod.TotalProgressWriter
 	return indexMissing, nil
 }
 
-func openSetValue(key, path string, lkv *localKeyValues) error {
+func openSetValue(key, path string, lkv *keyValues) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
