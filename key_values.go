@@ -45,7 +45,7 @@ func NewKeyValues(dir, ext string) (KeyValues, error) {
 		mtx: new(sync.Mutex),
 	}
 
-	kv.lmt = kv.logRecordsModTime()
+	_, kv.lmt = kv.IsCurrent()
 
 	if err := kv.refreshLogRecords(); os.IsNotExist(err) {
 		// do nothing
@@ -56,16 +56,11 @@ func NewKeyValues(dir, ext string) (KeyValues, error) {
 	return kv, nil
 }
 
-func (kv *keyValues) logRecordsModTime() time.Time {
-	if fi, err := os.Stat(kv.absLogRecordsFilename()); err == nil {
-		return fi.ModTime()
-	} else {
-		return time.Unix(0, 0)
-	}
-}
-
 func (kv *keyValues) IsCurrent() (bool, time.Time) {
-	lmt := kv.logRecordsModTime()
+	lmt := time.Unix(0, 0)
+	if fi, err := os.Stat(kv.absLogRecordsFilename()); err == nil {
+		lmt = fi.ModTime()
+	}
 	return lmt == kv.lmt, lmt
 }
 
@@ -75,7 +70,9 @@ func (kv *keyValues) refreshLogRecords() error {
 			return nil
 		}
 	} else {
+		kv.mtx.Lock()
 		kv.lmt = lmt
+		kv.mtx.Unlock()
 	}
 
 	absLogFilename := kv.absLogRecordsFilename()
@@ -255,14 +252,8 @@ func (kv *keyValues) createLogRecord(key string) error {
 }
 
 func (kv *keyValues) updateLogRecord(key string) error {
-	if err := kv.refreshLogRecords(); err != nil {
-		return err
-	}
-
 	kv.mtx.Lock()
-
 	updated := false
-
 	for _, rec := range kv.log {
 		if rec.Id == key && rec.Mt == update {
 			rec.Ts = time.Now().Unix()
