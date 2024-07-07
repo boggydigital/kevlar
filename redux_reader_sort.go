@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import "sort"
 
@@ -43,7 +43,7 @@ func (rdx *redux) Sort(ids []string, desc bool, sortBy ...string) ([]string, err
 	for _, id := range ids {
 		iv := idValues{id: id}
 		for _, p := range sortBy {
-			v, _ := rdx.GetFirstVal(p, id)
+			v, _ := rdx.GetLastVal(p, id)
 			iv.values = append(iv.values, v)
 		}
 		sis.ipv = append(sis.ipv, iv)

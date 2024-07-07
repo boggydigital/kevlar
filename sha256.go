@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"crypto/sha256"
@@ -6,12 +6,11 @@ import (
 	"io"
 )
 
-// Sha256 computes SHA-256 hash of a bytes slice
 func Sha256(reader io.Reader) (string, error) {
 	h := sha256.New()
-	_, err := io.Copy(h, reader)
-	if err != nil {
+	if _, err := io.Copy(h, reader); err == nil {
+		return fmt.Sprintf("%x", h.Sum(nil)), nil
+	} else {
 		return "", err
 	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }

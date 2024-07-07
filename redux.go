@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"encoding/gob"
@@ -8,19 +8,19 @@ import (
 	"time"
 )
 
-func UnknownReduxAsset(asset string) error {
+func ErrUnknownAsset(asset string) error {
 	return errors.New("unknown redux asset " + asset)
 }
 
 type redux struct {
-	dir            string
-	kv             KeyValues
-	assetKeyValues map[string]map[string][]string
-	modTime        int64
-	mtx            *sync.Mutex
+	dir string
+	kv  KeyValues
+	akv map[string]map[string][]string
+	lmt time.Time
+	mtx *sync.Mutex
 }
 
-func connectRedux(dir string, assets ...string) (*redux, error) {
+func newRedux(dir string, assets ...string) (*redux, error) {
 	kv, err := NewKeyValues(dir, GobExt)
 	if err != nil {
 		return nil, err
@@ -34,16 +34,25 @@ func connectRedux(dir string, assets ...string) (*redux, error) {
 	}
 
 	return &redux{
-		kv:             kv,
-		dir:            dir,
-		assetKeyValues: assetKeyValues,
-		modTime:        time.Now().Unix(),
-		mtx:            &sync.Mutex{},
+		kv:  kv,
+		dir: dir,
+		akv: assetKeyValues,
+		lmt: time.Now(),
+		mtx: new(sync.Mutex),
 	}, nil
 }
 
-func loadAsset(kvr KeyValues, asset string) (map[string][]string, error) {
-	arc, err := kvr.Get(asset)
+func loadAsset(kv KeyValues, asset string) (map[string][]string, error) {
+
+	ok, err := kv.Has(asset)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return make(map[string][]string), nil
+	}
+
+	arc, err := kv.Get(asset)
 	if err != nil {
 		return nil, err
 	}

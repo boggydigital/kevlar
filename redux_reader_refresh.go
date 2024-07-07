@@ -1,21 +1,17 @@
-package kvas
+package kevlar
 
-import "golang.org/x/exp/maps"
+import "time"
 
-func (rdx *redux) assetModTime(asset string) (int64, error) {
-	return rdx.kv.CurrentModTime(asset)
-}
-
-func (rdx *redux) ModTime() (int64, error) {
+func (rdx *redux) ModTime() (time.Time, error) {
 	rdx.mtx.Lock()
 	defer rdx.mtx.Unlock()
 
-	var mt int64 = 0
-	for asset := range rdx.assetKeyValues {
-		if amt, err := rdx.assetModTime(asset); err != nil {
-			return -1, err
+	mt := time.Unix(0, 0)
+	for asset := range rdx.akv {
+		if amt, err := rdx.kv.ModTime(asset); err != nil {
+			return time.Unix(0, 0), err
 		} else {
-			if mt < amt {
+			if amt.After(mt) {
 				mt = amt
 			}
 		}
@@ -24,17 +20,17 @@ func (rdx *redux) ModTime() (int64, error) {
 }
 
 func (rdx *redux) refresh() (*redux, error) {
-	if err := rdx.kv.IndexRefresh(); err != nil {
-		return rdx, err
-	}
 
-	modTime, err := rdx.ModTime()
-	if err != nil {
-		return rdx, err
-	}
+	for asset := range rdx.akv {
+		if ok, _ := rdx.kv.IsCurrent(); ok {
+			continue
+		}
 
-	if rdx.modTime < modTime {
-		return connectRedux(rdx.dir, maps.Keys(rdx.assetKeyValues)...)
+		ckv, err := loadAsset(rdx.kv, asset)
+		if err != nil {
+			return nil, err
+		}
+		rdx.akv[asset] = ckv
 	}
 
 	return rdx, nil

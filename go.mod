@@ -1,6 +1,8 @@
 module github.com/boggydigital/kvas
 
-go 1.22.3
+go 1.22.4
+
+toolchain go1.22.5
 
 require (
 	github.com/boggydigital/testo v0.1.8
@@ -9,3 +11,5 @@ require (
 )
 
 require github.com/boggydigital/nod v0.1.21
+
+require github.com/boggydigital/busan v0.1.0 // indirect

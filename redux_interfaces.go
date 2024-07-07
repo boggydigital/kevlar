@@ -1,6 +1,9 @@
-package kvas
+package kevlar
 
-import "io"
+import (
+	"io"
+	"time"
+)
 
 type ReadableRedux interface {
 	MustHave(assets ...string) error
@@ -9,9 +12,8 @@ type ReadableRedux interface {
 	HasKey(asset, key string) bool
 	HasValue(asset, key, val string) bool
 	GetAllValues(asset, key string) ([]string, bool)
-	GetFirstVal(asset, key string) (string, bool)
 	GetLastVal(asset, key string) (string, bool)
-	ModTime() (int64, error)
+	ModTime() (time.Time, error)
 	RefreshReader() (ReadableRedux, error)
 	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
 	Match(query map[string][]string, options ...MatchOption) []string
@@ -25,8 +27,8 @@ type WriteableRedux interface {
 	BatchAddValues(asset string, keyValues map[string][]string) error
 	ReplaceValues(asset, key string, values ...string) error
 	BatchReplaceValues(asset string, keyValues map[string][]string) error
-	CutValues(asset, key string, values ...string) error
 	CutKeys(asset string, keys ...string) error
+	CutValues(asset, key string, values ...string) error
 	BatchCutValues(asset string, keyValues map[string][]string) error
 	RefreshWriter() (WriteableRedux, error)
 }

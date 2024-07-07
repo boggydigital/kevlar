@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"github.com/boggydigital/testo"
@@ -28,11 +28,11 @@ func TestRedux_MustHave(t *testing.T) {
 
 func TestRedux_Keys(t *testing.T) {
 	rdx := mockRedux()
-	for asset := range rdx.assetKeyValues {
+	for asset := range rdx.akv {
 		keys := rdx.Keys(asset)
-		testo.EqualValues(t, len(keys), len(rdx.assetKeyValues[asset]))
+		testo.EqualValues(t, len(keys), len(rdx.akv[asset]))
 		for _, k := range keys {
-			_, ok := rdx.assetKeyValues[asset][k]
+			_, ok := rdx.akv[asset][k]
 			testo.EqualValues(t, ok, true)
 		}
 	}
@@ -114,7 +114,7 @@ func TestRedux_GetAllValues(t *testing.T) {
 		t.Run(tt.asset+tt.key, func(t *testing.T) {
 			values, ok := rdx.GetAllValues(tt.asset, tt.key)
 			if ok {
-				testo.DeepEqual(t, rdx.assetKeyValues[tt.asset][tt.key], values)
+				testo.DeepEqual(t, rdx.akv[tt.asset][tt.key], values)
 			}
 			testo.EqualValues(t, ok, tt.ok)
 		})
@@ -135,9 +135,9 @@ func TestRedux_GetFirstVal(t *testing.T) {
 	rdx := mockRedux()
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
-			fv, ok := rdx.GetFirstVal(tt.asset, tt.key)
+			fv, ok := rdx.GetLastVal(tt.asset, tt.key)
 			if ok {
-				testo.DeepEqual(t, rdx.assetKeyValues[tt.asset][tt.key][0], fv)
+				testo.DeepEqual(t, rdx.akv[tt.asset][tt.key][0], fv)
 			}
 			testo.EqualValues(t, ok, tt.ok)
 		})

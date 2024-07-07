@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"golang.org/x/exp/maps"
@@ -27,13 +27,6 @@ func (rdx *redux) MatchAsset(asset string, terms []string, scope []string, optio
 
 	return maps.Keys(matches)
 }
-
-type MatchOption int
-
-const (
-	CaseSensitive = iota
-	FullMatch
-)
 
 func (rdx *redux) Match(query map[string][]string, options ...MatchOption) []string {
 	var matches []string

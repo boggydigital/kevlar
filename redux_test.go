@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 func reduxCleanup(assets ...string) error {
 	for _, asset := range assets {
-		rdxPath := filepath.Join(os.TempDir(), asset+GobExt)
+		rdxPath := filepath.Join(os.TempDir(), testsDirname, asset+GobExt)
 		if _, err := os.Stat(rdxPath); err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -19,14 +19,13 @@ func reduxCleanup(assets ...string) error {
 			return err
 		}
 	}
-
-	return indexCleanup()
+	return logRecordsCleanup()
 }
 
 func mockRedux() *redux {
 	return &redux{
-		dir: os.TempDir(),
-		assetKeyValues: map[string]map[string][]string{
+		dir: filepath.Join(os.TempDir(), testsDirname),
+		akv: map[string]map[string][]string{
 			"a1": {
 				"k1": {"v11"},
 				"k2": {"v21", "v22"},
@@ -37,7 +36,7 @@ func mockRedux() *redux {
 				"k5": {"v51", "v52", "v53", "v54", "v55"},
 			},
 		},
-		kv:  mockLocalKeyValues(),
-		mtx: &sync.Mutex{},
+		kv:  mockKeyValues(),
+		mtx: new(sync.Mutex),
 	}
 }

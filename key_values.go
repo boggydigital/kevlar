@@ -1,11 +1,11 @@
-package kvas
+package kevlar
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/boggydigital/nod"
+	"encoding/gob"
+	"github.com/boggydigital/busan"
+	"golang.org/x/exp/maps"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,82 +13,334 @@ import (
 	"time"
 )
 
-type keyValues struct {
-	dir      string
-	ext      string
-	idx      index
-	mtx      *sync.Mutex
-	connTime int64
-}
-
 const (
-	JsonExt = ".json"
-	GobExt  = ".gob"
-	HtmlExt = ".html"
-	XmlExt  = ".xml"
+	kevlarDirname         = "_kevlar"
+	logRecordsFilename    = "_log.gob"
+	logRecordsModFilename = "_log.mod"
+	hashExt               = ".sha256"
 )
 
-const dirPerm os.FileMode = 0755
+type keyValues struct {
+	dir  string
+	ext  string
+	lmt  time.Time
+	log  logRecords
+	keys map[string]any
+	mtx  *sync.Mutex
+}
 
-func NewKeyValues(dir string, ext string) (KeyValues, error) {
+// NewKeyValues connects a new local key value storage at the specified directory
+// and will use specified extension for the value files
+func NewKeyValues(dir, ext string) (KeyValues, error) {
 
-	switch ext {
-	case JsonExt:
-		fallthrough
-	case GobExt:
-		fallthrough
-	case HtmlExt:
-		fallthrough
-	case XmlExt:
-		//do nothing
-	default:
-		return nil, fmt.Errorf("unknown extension %s", ext)
+	// make sure dir we're connecting to exists
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, err
+		}
 	}
 
 	kv := &keyValues{
 		dir: dir,
 		ext: ext,
-		idx: make(index),
-		mtx: &sync.Mutex{},
+		mtx: new(sync.Mutex),
 	}
-	err := kv.idx.read(kv.dir)
 
-	kv.connTime = time.Now().Unix()
+	kv.lmt = kv.logRecordsModTime()
 
-	return kv, err
-}
-
-// Has verifies if a value set contains provided key
-func (lkv *keyValues) Has(key string) bool {
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
-	_, ok := lkv.idx[key]
-	return ok
-}
-
-func (lkv *keyValues) Get(key string) (io.ReadCloser, error) {
-	if !lkv.Has(key) {
-		return nil, nil
+	if err := kv.refreshLogRecords(); os.IsNotExist(err) {
+		// do nothing
+	} else if err != nil {
+		return nil, err
 	}
-	return lkv.GetFromStorage(key)
+
+	return kv, nil
 }
 
-func (lkv *keyValues) GetFromStorage(key string) (io.ReadCloser, error) {
-	valAbsPath := lkv.valuePath(key)
-	if _, err := os.Stat(valAbsPath); os.IsNotExist(err) {
-		return nil, nil
+func (kv *keyValues) logRecordsModTime() time.Time {
+	absLogRecordsModFilename := kv.absLogRecordsModFilename()
+
+	logModFile, err := os.Open(absLogRecordsModFilename)
+	if err != nil {
+		return time.Unix(0, 0)
 	}
-	return os.Open(valAbsPath)
+
+	var ts time.Time
+	if err := gob.NewDecoder(logModFile).Decode(&ts); err != nil {
+		return time.Unix(0, 0)
+	}
+
+	return ts
 }
 
-func (lkv *keyValues) valuePath(key string) string {
-	key = url.PathEscape(key)
-	return filepath.Join(lkv.dir, key+lkv.ext)
+func (kv *keyValues) IsCurrent() (bool, time.Time) {
+	lmt := kv.logRecordsModTime()
+	return lmt == kv.lmt, lmt
 }
 
-// Set stores a bytes slice value by a provided key
-func (lkv *keyValues) Set(key string, reader io.Reader) error {
+func (kv *keyValues) refreshLogRecords() error {
+	if ok, lmt := kv.IsCurrent(); ok {
+		if kv.log != nil {
+			return nil
+		}
+	} else {
+		kv.lmt = lmt
+	}
+
+	absLogFilename := kv.absLogRecordsFilename()
+	if _, err := os.Stat(absLogFilename); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	logFile, err := os.Open(absLogFilename)
+	if err != nil {
+		return err
+	}
+	defer logFile.Close()
+
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
+	if err := gob.NewDecoder(logFile).Decode(&kv.log); err == io.EOF {
+		// do nothing - empty log will be initialized later
+	} else if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (kv *keyValues) refreshKeys() error {
+
+	if err := kv.refreshLogRecords(); err != nil {
+		return err
+	}
+
+	uks := make(map[string]any)
+	for _, lr := range kv.log {
+		switch lr.Mt {
+		case create:
+			fallthrough
+		case update:
+			uks[lr.Id] = nil
+		case cut:
+			delete(uks, lr.Id)
+		default:
+			panic("unknown log record mutation type")
+		}
+	}
+
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
+	kv.keys = uks
+
+	return nil
+}
+
+func (kv *keyValues) Keys() ([]string, error) {
+	if err := kv.refreshKeys(); err != nil {
+		return nil, err
+	}
+
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
+	return maps.Keys(kv.keys), nil
+}
+
+func (kv *keyValues) Has(key string) (bool, error) {
+	if err := kv.refreshKeys(); err != nil {
+		return false, err
+	}
+
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
+	_, ok := kv.keys[key]
+
+	return ok, nil
+}
+
+func (kv *keyValues) absLogRecordsFilename() string {
+	return filepath.Join(kv.dir, kevlarDirname, logRecordsFilename)
+}
+
+func (kv *keyValues) absLogRecordsModFilename() string {
+	return filepath.Join(kv.dir, kevlarDirname, logRecordsModFilename)
+}
+
+func (kv *keyValues) absValueFilename(key string) string {
+	return filepath.Join(kv.dir, busan.Sanitize(key)+kv.ext)
+}
+
+func (kv *keyValues) absHashFilename(key string) string {
+	return filepath.Join(kv.dir, kevlarDirname, busan.Sanitize(key)+hashExt)
+}
+
+func (kv *keyValues) Get(key string) (io.ReadCloser, error) {
+	return os.Open(kv.absValueFilename(key))
+}
+
+func (kv *keyValues) currentHash(key string) (string, error) {
+	if ok, err := kv.Has(key); err == nil {
+		if !ok {
+			return "", nil
+		}
+	} else {
+		return "", err
+	}
+
+	absHashFilename := kv.absHashFilename(key)
+	if _, err := os.Stat(absHashFilename); err != nil {
+		return "", nil
+	}
+	hashFile, err := os.Open(absHashFilename)
+	if err != nil {
+		return "", err
+	}
+	defer hashFile.Close()
+
+	sb := new(strings.Builder)
+
+	if _, err := io.Copy(sb, hashFile); err != nil {
+		return "", err
+	}
+
+	return sb.String(), nil
+}
+
+func (kv *keyValues) createLogMod() error {
+	absLogRecordsModFilename := kv.absLogRecordsModFilename()
+	dir, _ := filepath.Split(absLogRecordsModFilename)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	logModFile, err := os.Create(absLogRecordsModFilename)
+	if err != nil {
+		return err
+	}
+	defer logModFile.Close()
+
+	if err := lockFd(logModFile.Fd()); err != nil {
+		return err
+	}
+
+	if err := gob.NewEncoder(logModFile).Encode(time.Now()); err != nil {
+		return err
+	}
+
+	return unlockFd(logModFile.Fd())
+}
+
+func (kv *keyValues) appendLogRecord(rec *logRecord) error {
+	if err := kv.refreshLogRecords(); err != nil {
+		return err
+	}
+
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
+	kv.log = append(kv.log, rec)
+	kv.lmt = time.Now()
+
+	absLogRecordsFilename := kv.absLogRecordsFilename()
+	dir, _ := filepath.Split(absLogRecordsFilename)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	logFile, err := os.Create(absLogRecordsFilename)
+	if err != nil {
+		return err
+	}
+	defer logFile.Close()
+
+	if err := lockFd(logFile.Fd()); err != nil {
+		return err
+	}
+
+	if err := gob.NewEncoder(logFile).Encode(kv.log); err != nil {
+		return err
+	}
+
+	if err := kv.createLogMod(); err != nil {
+		return err
+	}
+
+	return unlockFd(logFile.Fd())
+}
+
+func (kv *keyValues) createOrUpdateLogRecord(key string) error {
+	rec := &logRecord{
+		Ts: time.Now().Unix(),
+		Id: key,
+	}
+
+	if ok, err := kv.Has(key); err == nil {
+		if ok {
+			rec.Mt = update
+		} else {
+			rec.Mt = create
+			// adding the key right away to respond to Has queries before log update
+			kv.mtx.Lock()
+			kv.keys[key] = nil
+			kv.mtx.Unlock()
+		}
+	} else {
+		return err
+	}
+
+	return kv.appendLogRecord(rec)
+}
+
+func (kv *keyValues) cutLogRecord(key string) error {
+	rec := &logRecord{
+		Ts: time.Now().Unix(),
+		Mt: cut,
+		Id: key,
+	}
+
+	kv.mtx.Lock()
+	delete(kv.keys, key)
+	kv.mtx.Unlock()
+
+	return kv.appendLogRecord(rec)
+}
+
+func (kv *keyValues) createHashFile(key, hash string) error {
+	absHashFilename := kv.absHashFilename(key)
+	dir, _ := filepath.Split(absHashFilename)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	hashFile, err := os.Create(absHashFilename)
+	if err != nil {
+		return err
+	}
+	defer hashFile.Close()
+
+	if _, err := io.Copy(hashFile, strings.NewReader(hash)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Set writes the value to storage if the value has changed since the
+// last time it was written. This is validated with a SHA-256 hash that
+// is stored alongside the value in storage
+func (kv *keyValues) Set(key string, reader io.Reader) error {
 
 	var buf bytes.Buffer
 	tr := io.TeeReader(reader, &buf)
@@ -99,205 +351,123 @@ func (lkv *keyValues) Set(key string, reader io.Reader) error {
 		return err
 	}
 
-	lkv.mtx.Lock()
-
-	if hash == lkv.idx[key].Hash {
-		lkv.mtx.Unlock()
-		return nil
-	}
-
-	lkv.mtx.Unlock()
-
-	// write value
-	valuePath := lkv.valuePath(key)
-
-	if _, err := os.Stat(lkv.dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(lkv.dir, dirPerm); err != nil {
-			return err
-		}
-	}
-	file, err := os.Create(valuePath)
-	defer file.Close()
+	currentHash, err := kv.currentHash(key)
 	if err != nil {
 		return err
 	}
+
+	// the latest value is already set
+	if hash == currentHash {
+		return nil
+	}
+
+	if err := kv.createHashFile(key, hash); err != nil {
+		return err
+	}
+
+	// write value
+	file, err := os.Create(kv.absValueFilename(key))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
 	if _, err = io.Copy(file, &buf); err != nil {
 		return err
 	}
 
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
-	// update index
-	lkv.idx.upd(key, hash)
-	return lkv.idx.write(lkv.dir)
+	return kv.createOrUpdateLogRecord(key)
 }
 
-// Cut deletes value from keyValues by a provided key
-func (lkv *keyValues) Cut(key string) (bool, error) {
-
-	if !lkv.Has(key) {
-		return false, nil
-	}
-
-	// delete value
-	valuePath := lkv.valuePath(key)
-	if _, err := os.Stat(valuePath); os.IsNotExist(err) {
-		return false, fmt.Errorf("index contains key %s, file not found", key)
-	}
-
-	if err := os.Remove(valuePath); err != nil {
+// Cut removes the value from storage in the following sequence of events:
+// - cut operation log value is added
+// - stored hash value is removed
+// - stored value is removed
+func (kv *keyValues) Cut(key string) (bool, error) {
+	if ok, err := kv.Has(key); err == nil {
+		if !ok {
+			return false, nil
+		}
+	} else {
 		return false, err
 	}
 
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
-	// update index
-	delete(lkv.idx, key)
-
-	return true, lkv.idx.write(lkv.dir)
-}
-
-func (lkv *keyValues) Keys() []string {
-	return lkv.idx.Keys(lkv.mtx)
-}
-
-// CreatedAfter returns keys of values created on or after provided timestamp
-func (lkv *keyValues) CreatedAfter(timestamp int64) []string {
-	return lkv.idx.CreatedAfter(timestamp, lkv.mtx)
-}
-
-// ModifiedAfter returns keys of values modified on or after provided timestamp
-// that were created earlier
-func (lkv *keyValues) ModifiedAfter(timestamp int64, strictlyModified bool) []string {
-	return lkv.idx.ModifiedAfter(timestamp, strictlyModified, lkv.mtx)
-}
-
-func (lkv *keyValues) IsModifiedAfter(key string, timestamp int64) bool {
-	return lkv.idx.IsModifiedAfter(key, timestamp, lkv.mtx)
-}
-
-func (lkv *keyValues) IndexCurrentModTime() (int64, error) {
-	indexPath := indexPath(lkv.dir)
-	if stat, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return -1, nil
-	} else if err != nil {
-		return -1, err
-	} else {
-		return stat.ModTime().Unix(), nil
-	}
-}
-
-func (lkv *keyValues) CurrentModTime(key string) (int64, error) {
-	valuePath := lkv.valuePath(key)
-	if stat, err := os.Stat(valuePath); os.IsNotExist(err) {
-		return -1, nil
-	} else if err != nil {
-		return -1, err
-	} else {
-		return stat.ModTime().Unix(), nil
-	}
-}
-
-func (lkv *keyValues) IndexRefresh() error {
-	indexModTime, err := lkv.IndexCurrentModTime()
-	if err != nil {
-		return err
+	if err := kv.cutLogRecord(key); err != nil {
+		return false, err
 	}
 
-	lkv.mtx.Lock()
-	defer lkv.mtx.Unlock()
-
-	if lkv.connTime < indexModTime {
-		if err := lkv.idx.read(lkv.dir); err != nil {
-			return err
-		}
-		lkv.connTime = indexModTime
-	}
-
-	return nil
-}
-
-func (lkv *keyValues) VetIndexOnly(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
-	indexOnly := make([]string, 0)
-	indexModified := false
-
-	keys := lkv.Keys()
-
-	if tpw != nil {
-		tpw.TotalInt(len(keys))
-	}
-
-	for _, key := range keys {
-		valAbsPath := lkv.valuePath(key)
-		if _, err := os.Stat(valAbsPath); err == nil {
-			if tpw != nil {
-				tpw.Increment()
-			}
-			continue
-		}
-		indexOnly = append(indexOnly, key)
-		if fix {
-			delete(lkv.idx, key)
-			indexModified = true
-		}
-		if tpw != nil {
-			tpw.Increment()
+	absHashFilename := kv.absHashFilename(key)
+	if _, err := os.Stat(absHashFilename); err == nil {
+		if err := os.Remove(absHashFilename); err != nil {
+			return false, err
 		}
 	}
 
-	if indexModified {
-		if err := lkv.idx.write(lkv.dir); err != nil {
-			return nil, err
+	absValueFilename := kv.absValueFilename(key)
+	if _, err := os.Stat(absValueFilename); err == nil {
+		if err := os.Remove(absValueFilename); err != nil {
+			return false, err
 		}
 	}
 
-	return indexOnly, nil
+	return true, nil
 }
 
-func (lkv *keyValues) VetIndexMissing(fix bool, tpw nod.TotalProgressWriter) ([]string, error) {
-	indexMissing := make([]string, 0)
-
-	filenames, err := filepath.Glob("*" + lkv.ext)
-	if err != nil {
+func (kv *keyValues) filterLog(m func(*logRecord) bool) ([]string, error) {
+	if err := kv.refreshLogRecords(); err != nil {
 		return nil, err
 	}
-
-	if tpw != nil {
-		tpw.TotalInt(len(filenames))
-	}
-
-	for _, fn := range filenames {
-		key := strings.TrimSuffix(fn, lkv.ext)
-		if _, ok := lkv.idx[key]; !ok {
-			indexMissing = append(indexMissing, key)
-			if fix {
-				valAbsPath := lkv.valuePath(key)
-				if err := openSetValue(key, valAbsPath, lkv); err != nil {
-					return nil, err
-				}
-			}
-			if tpw != nil {
-				tpw.Increment()
-			}
+	matches := make(map[string]any)
+	for _, lr := range kv.log {
+		if m(lr) {
+			matches[lr.Id] = nil
+		}
+		if lr.Mt == cut {
+			delete(matches, lr.Id)
 		}
 	}
-
-	return indexMissing, nil
+	return maps.Keys(matches), nil
 }
 
-func openSetValue(key, path string, lkv *keyValues) error {
-	f, err := os.Open(path)
+func (kv *keyValues) CreatedAfter(ts int64) ([]string, error) {
+	return kv.filterLog(func(r *logRecord) bool {
+		return r.Mt == create && r.Ts >= ts
+	})
+}
+
+func (kv *keyValues) UpdatedAfter(ts int64) ([]string, error) {
+	return kv.filterLog(func(r *logRecord) bool {
+		return r.Mt == update && r.Ts >= ts
+	})
+}
+
+func (kv *keyValues) CreatedOrUpdatedAfter(ts int64) ([]string, error) {
+	return kv.filterLog(func(r *logRecord) bool {
+		createdAfter := r.Mt == create && r.Ts >= ts
+		updatedAfter := r.Mt == update && r.Ts >= ts
+		return createdAfter || updatedAfter
+	})
+}
+
+func (kv *keyValues) IsUpdatedAfter(key string, ts int64) (bool, error) {
+	filtered, err := kv.filterLog(func(r *logRecord) bool {
+		if r.Id != key {
+			return false
+		}
+		return r.Mt == update && r.Ts >= ts
+	})
 	if err != nil {
-		return err
+		return false, err
 	}
-	defer f.Close()
+	return len(filtered) > 0, nil
+}
 
-	if err := lkv.Set(key, f); err != nil {
-		return err
+func (kv *keyValues) ModTime(key string) (time.Time, error) {
+	if fi, err := os.Stat(kv.absValueFilename(key)); err == nil {
+		return fi.ModTime(), nil
+	} else if os.IsNotExist(err) {
+		return time.Unix(0, 0), nil
+	} else {
+		return time.Unix(0, 0), err
 	}
-
-	return nil
 }

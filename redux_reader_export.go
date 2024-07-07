@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"github.com/boggydigital/wits"
@@ -9,7 +9,7 @@ import (
 
 func (rdx *redux) Export(w io.Writer, keys ...string) error {
 
-	assets := maps.Keys(rdx.assetKeyValues)
+	assets := maps.Keys(rdx.akv)
 	sort.Strings(assets)
 
 	skv := make(wits.SectionKeyValues)
@@ -17,7 +17,7 @@ func (rdx *redux) Export(w io.Writer, keys ...string) error {
 	for _, key := range keys {
 		skv[key] = make(wits.KeyValues)
 		for _, asset := range assets {
-			if values := rdx.assetKeyValues[asset][key]; len(values) > 0 {
+			if values := rdx.akv[asset][key]; len(values) > 0 {
 				skv[key][asset] = values
 			}
 		}

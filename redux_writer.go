@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"bytes"
@@ -7,12 +7,12 @@ import (
 )
 
 func NewReduxWriter(dir string, assets ...string) (WriteableRedux, error) {
-	return connectRedux(dir, assets...)
+	return newRedux(dir, assets...)
 }
 
 func (rdx *redux) addValues(asset, key string, values ...string) error {
 	if !rdx.HasAsset(asset) {
-		return UnknownReduxAsset(asset)
+		return ErrUnknownAsset(asset)
 	}
 	newValues := make([]string, 0, len(values))
 	for _, v := range values {
@@ -20,15 +20,12 @@ func (rdx *redux) addValues(asset, key string, values ...string) error {
 			newValues = append(newValues, v)
 		}
 	}
-	rdx.assetKeyValues[asset][key] = append(rdx.assetKeyValues[asset][key], newValues...)
-	return nil
+	rdx.akv[asset][key] = append(rdx.akv[asset][key], newValues...)
+	return rdx.write(asset)
 }
 
 func (rdx *redux) AddValues(asset, key string, values ...string) error {
-	if err := rdx.addValues(asset, key, values...); err != nil {
-		return err
-	}
-	return rdx.write(asset)
+	return rdx.addValues(asset, key, values...)
 }
 
 func (rdx *redux) BatchAddValues(asset string, keyValues map[string][]string) error {
@@ -37,14 +34,14 @@ func (rdx *redux) BatchAddValues(asset string, keyValues map[string][]string) er
 			return err
 		}
 	}
-	return rdx.write(asset)
+	return nil
 }
 
 func (rdx *redux) replaceValues(asset, key string, values ...string) error {
 	if !rdx.HasAsset(asset) {
-		return UnknownReduxAsset(asset)
+		return ErrUnknownAsset(asset)
 	}
-	rdx.assetKeyValues[asset][key] = values
+	rdx.akv[asset][key] = values
 	return nil
 }
 
@@ -69,26 +66,26 @@ func (rdx *redux) BatchReplaceValues(asset string, keyValues map[string][]string
 
 func (rdx *redux) cutValues(asset, key string, values ...string) error {
 	if !rdx.HasAsset(asset) {
-		return UnknownReduxAsset(asset)
+		return ErrUnknownAsset(asset)
 	}
 	if !rdx.HasKey(asset, key) {
 		return nil
 	}
 
-	newValues := make([]string, 0, len(rdx.assetKeyValues[asset][key]))
+	newValues := make([]string, 0, len(rdx.akv[asset][key]))
 
-	for _, v := range rdx.assetKeyValues[asset][key] {
+	for _, v := range rdx.akv[asset][key] {
 		if slices.Contains(values, v) {
 			continue
 		}
 		newValues = append(newValues, v)
 	}
 
-	rdx.assetKeyValues[asset][key] = newValues
+	rdx.akv[asset][key] = newValues
 
 	// remove keys if there are no values left
-	if len(rdx.assetKeyValues[asset][key]) == 0 {
-		delete(rdx.assetKeyValues[asset], key)
+	if len(rdx.akv[asset][key]) == 0 {
+		delete(rdx.akv[asset], key)
 	}
 	return nil
 }
@@ -102,14 +99,14 @@ func (rdx *redux) CutValues(asset, key string, values ...string) error {
 
 func (rdx *redux) CutKeys(asset string, keys ...string) error {
 	if !rdx.HasAsset(asset) {
-		return UnknownReduxAsset(asset)
+		return ErrUnknownAsset(asset)
 	}
 	if len(keys) == 0 {
 		return nil
 	}
 
 	for _, key := range keys {
-		delete(rdx.assetKeyValues[asset], key)
+		delete(rdx.akv[asset], key)
 	}
 	return rdx.write(asset)
 }
@@ -128,11 +125,11 @@ func (rdx *redux) BatchCutValues(asset string, keyValues map[string][]string) er
 
 func (rdx *redux) write(asset string) error {
 	if !rdx.HasAsset(asset) {
-		return UnknownReduxAsset(asset)
+		return ErrUnknownAsset(asset)
 	}
 
 	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(rdx.assetKeyValues[asset]); err != nil {
+	if err := gob.NewEncoder(buf).Encode(rdx.akv[asset]); err != nil {
 		return err
 	}
 

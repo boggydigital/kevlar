@@ -1,4 +1,4 @@
-package kvas
+package kevlar
 
 import (
 	"golang.org/x/exp/maps"
@@ -6,29 +6,29 @@ import (
 )
 
 func NewReduxReader(dir string, assets ...string) (ReadableRedux, error) {
-	return connectRedux(dir, assets...)
+	return newRedux(dir, assets...)
 }
 
 func (rdx *redux) MustHave(assets ...string) error {
 	for _, asset := range assets {
 		if !rdx.HasAsset(asset) {
-			return UnknownReduxAsset(asset)
+			return ErrUnknownAsset(asset)
 		}
 	}
 	return nil
 }
 
 func (rdx *redux) Keys(asset string) []string {
-	return maps.Keys(rdx.assetKeyValues[asset])
+	return maps.Keys(rdx.akv[asset])
 }
 
 func (rdx *redux) HasAsset(asset string) bool {
-	_, ok := rdx.assetKeyValues[asset]
+	_, ok := rdx.akv[asset]
 	return ok
 }
 
 func (rdx *redux) HasKey(asset, key string) bool {
-	if akr, ok := rdx.assetKeyValues[asset]; ok {
+	if akr, ok := rdx.akv[asset]; ok {
 		_, ok = akr[key]
 		return ok
 	} else {
@@ -37,7 +37,7 @@ func (rdx *redux) HasKey(asset, key string) bool {
 }
 
 func (rdx *redux) HasValue(asset, key, val string) bool {
-	if akr, ok := rdx.assetKeyValues[asset]; ok {
+	if akr, ok := rdx.akv[asset]; ok {
 		if kr, ok := akr[key]; ok {
 			return slices.Contains(kr, val)
 		} else {
@@ -52,19 +52,12 @@ func (rdx *redux) GetAllValues(asset, key string) ([]string, bool) {
 	if !rdx.HasAsset(asset) {
 		return nil, false
 	}
-	if rdx.assetKeyValues[asset] == nil {
+	if rdx.akv[asset] == nil {
 		return nil, false
 	}
 
-	val, ok := rdx.assetKeyValues[asset][key]
+	val, ok := rdx.akv[asset][key]
 	return val, ok
-}
-
-func (rdx *redux) GetFirstVal(asset, key string) (string, bool) {
-	if values, ok := rdx.GetAllValues(asset, key); ok && len(values) > 0 {
-		return values[0], true
-	}
-	return "", false
 }
 
 func (rdx *redux) GetLastVal(asset, key string) (string, bool) {
