@@ -356,10 +356,6 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 		return nil
 	}
 
-	kv.mtx.Lock()
-	kv.lmt = time.Now()
-	kv.mtx.Unlock()
-
 	if err := kv.createHashFile(key, hash); err != nil {
 		return err
 	}
@@ -390,10 +386,6 @@ func (kv *keyValues) Cut(key string) (bool, error) {
 	} else {
 		return false, err
 	}
-
-	kv.mtx.Lock()
-	kv.lmt = time.Now()
-	kv.mtx.Unlock()
 
 	absHashFilename := kv.absHashFilename(key)
 	if _, err := os.Stat(absHashFilename); err == nil {
