@@ -64,6 +64,7 @@ func (kv *keyValues) logRecordsModTime() time.Time {
 	if err != nil {
 		return time.Unix(0, 0)
 	}
+	defer logModFile.Close()
 
 	var ts time.Time
 	if err := gob.NewDecoder(logModFile).Decode(&ts); err != nil {
@@ -299,6 +300,9 @@ func (kv *keyValues) createLogRecord(key string) error {
 }
 
 func (kv *keyValues) updateLogRecord(key string) error {
+	if err := kv.refreshLogRecords(); err != nil {
+		return err
+	}
 
 	kv.mtx.Lock()
 

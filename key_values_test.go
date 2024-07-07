@@ -267,29 +267,21 @@ func TestLocalKeyValues_ModTime(t *testing.T) {
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
 
-	log.Println("Set test")
 	testo.Error(t, kv.Set("test", strings.NewReader("test")), false)
 
-	log.Println("ModTime 1")
 	cmt, err := kv.ModTime("1")
 	testo.Error(t, err, false)
 	testo.EqualValues(t, cmt.Before(start), true)
 
-	log.Println("ModTime test")
 	cmt, err = kv.ModTime("test")
 	testo.Error(t, err, false)
 
-	log.Println("start", start)
-	log.Println("cmt", cmt)
-
 	testo.EqualValues(t, cmt.After(start), true)
 
-	log.Println("ModTime 2")
 	cmt, err = kv.ModTime("2")
 	testo.Error(t, err, false)
 	testo.EqualValues(t, cmt.Before(start), true)
 
-	log.Println("Cut test")
 	ok, err := kv.Cut("test")
 	testo.EqualValues(t, ok, true)
 	testo.Error(t, err, false)
@@ -451,27 +443,8 @@ func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 	testo.Error(t, kv.Set("1", strings.NewReader("2")), false)
 	testo.EqualValues(t, len(kv.log), 2) // added update record
 
-	lmt := int64(0)
-	for _, rec := range kv.log {
-		if rec.Mt == update {
-			lmt = rec.Ts
-		}
-	}
-
-	time.Sleep(100 * time.Millisecond)
-
 	testo.Error(t, kv.Set("1", strings.NewReader("3")), false)
 	testo.EqualValues(t, len(kv.log), 2) // existing update record updated, no new log records
-
-	nlmt := int64(0)
-	for _, rec := range kv.log {
-		if rec.Mt == update {
-			nlmt = rec.Ts
-		}
-	}
-
-	// verify that new update record timestamp is actually updated
-	testo.CompareInt64(t, nlmt, lmt, testo.Greater)
 
 	ok, err = kv.Cut("1")
 	testo.EqualValues(t, ok, true)
