@@ -18,17 +18,22 @@ import (
 // 5) log mod time is create with the current timestamp
 // 6) log is written as a single operation (vs kv.appendLogRecord calls)
 // 7) old index is removed to make sure calling migrate again doesn't overwrite new data
-func Migrate(dir, ext string) error {
+func Migrate(dir string) error {
 
 	// 1)
 
-	asbIndexFilename := filepath.Join(dir, kvas_compat.IndexFilename)
+	absIndexFilename := filepath.Join(dir, kvas_compat.IndexFilename)
 
-	if _, err := os.Stat(asbIndexFilename); err != nil {
+	if _, err := os.Stat(absIndexFilename); os.IsNotExist(err) {
+		// if index file doesn't exist - don't throw error
+		// assuming the migration already happened and there's
+		// nothing else to do
+		return nil
+	} else if err != nil {
 		return err
 	}
 
-	indexFile, err := os.Open(asbIndexFilename)
+	indexFile, err := os.Open(absIndexFilename)
 	if err != nil {
 		return err
 	}
@@ -42,7 +47,9 @@ func Migrate(dir, ext string) error {
 
 	// 2)
 
-	ikv, err := NewKeyValues(dir, ext)
+	// we won't be writing anything that requires extension, so it
+	// can safely be set to an empty string
+	ikv, err := NewKeyValues(dir, "")
 	if err != nil {
 		return err
 	}
@@ -97,7 +104,7 @@ func Migrate(dir, ext string) error {
 
 	// 7)
 
-	if err = os.Remove(asbIndexFilename); err != nil {
+	if err = os.Remove(absIndexFilename); err != nil {
 		return err
 	}
 
