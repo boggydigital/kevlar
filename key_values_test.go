@@ -431,3 +431,51 @@ func TestKeyValues_MultiInstanceSafe(t *testing.T) {
 
 	testo.Error(t, logRecordsCleanup(), false)
 }
+
+func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
+	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	testo.Error(t, err, false)
+
+	kv, ok := ikv.(*keyValues)
+	testo.EqualValues(t, ok, true)
+	testo.Nil(t, kv, false)
+
+	testo.EqualValues(t, len(kv.log), 0)
+
+	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
+	testo.EqualValues(t, len(kv.log), 1) // added create record
+
+	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
+	testo.EqualValues(t, len(kv.log), 1) // no writes happened, same content, no new log records
+
+	testo.Error(t, kv.Set("1", strings.NewReader("2")), false)
+	testo.EqualValues(t, len(kv.log), 2) // added update record
+
+	lmt := int64(0)
+	for _, rec := range kv.log {
+		if rec.Mt == update {
+			lmt = rec.Ts
+		}
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	testo.Error(t, kv.Set("1", strings.NewReader("3")), false)
+	testo.EqualValues(t, len(kv.log), 2) // existing update record updated, no new log records
+
+	nlmt := int64(0)
+	for _, rec := range kv.log {
+		if rec.Mt == update {
+			nlmt = rec.Ts
+		}
+	}
+
+	// verify that new update record timestamp is actually updated
+	testo.CompareInt64(t, nlmt, lmt, testo.Greater)
+
+	ok, err = kv.Cut("1")
+	testo.EqualValues(t, ok, true)
+	testo.Error(t, err, false)
+
+	testo.Error(t, logRecordsCleanup(), false)
+}

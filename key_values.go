@@ -238,17 +238,7 @@ func (kv *keyValues) createLogMod() error {
 	return unlockFd(logModFile.Fd())
 }
 
-func (kv *keyValues) appendLogRecord(rec *logRecord) error {
-	if err := kv.refreshLogRecords(); err != nil {
-		return err
-	}
-
-	kv.mtx.Lock()
-	defer kv.mtx.Unlock()
-
-	kv.log = append(kv.log, rec)
-	kv.lmt = time.Now()
-
+func (kv *keyValues) createLogRecords() error {
 	absLogRecordsFilename := kv.absLogRecordsFilename()
 	dir, _ := filepath.Split(absLogRecordsFilename)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -278,27 +268,73 @@ func (kv *keyValues) appendLogRecord(rec *logRecord) error {
 	return unlockFd(logFile.Fd())
 }
 
-func (kv *keyValues) createOrUpdateLogRecord(key string) error {
+func (kv *keyValues) appendLogRecord(rec *logRecord) error {
+	if err := kv.refreshLogRecords(); err != nil {
+		return err
+	}
+
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
+	kv.log = append(kv.log, rec)
+	kv.lmt = time.Now()
+
+	return kv.createLogRecords()
+
+}
+
+func (kv *keyValues) createLogRecord(key string) error {
+	// adding the key right away to respond to Has queries before log update
+	kv.mtx.Lock()
+	kv.keys[key] = nil
+	kv.mtx.Unlock()
+
 	rec := &logRecord{
 		Ts: time.Now().Unix(),
+		Mt: create,
 		Id: key,
 	}
 
+	return kv.appendLogRecord(rec)
+}
+
+func (kv *keyValues) updateLogRecord(key string) error {
+
+	kv.mtx.Lock()
+
+	updated := false
+
+	for _, rec := range kv.log {
+		if rec.Id == key && rec.Mt == update {
+			rec.Ts = time.Now().Unix()
+			updated = true
+			break
+		}
+	}
+	kv.mtx.Unlock()
+
+	if updated {
+		return kv.createLogRecords()
+	} else {
+		rec := &logRecord{
+			Ts: time.Now().Unix(),
+			Mt: update,
+			Id: key,
+		}
+		return kv.appendLogRecord(rec)
+	}
+}
+
+func (kv *keyValues) createOrUpdateLogRecord(key string) error {
 	if ok, err := kv.Has(key); err == nil {
 		if ok {
-			rec.Mt = update
+			return kv.updateLogRecord(key)
 		} else {
-			rec.Mt = create
-			// adding the key right away to respond to Has queries before log update
-			kv.mtx.Lock()
-			kv.keys[key] = nil
-			kv.mtx.Unlock()
+			return kv.createLogRecord(key)
 		}
 	} else {
 		return err
 	}
-
-	return kv.appendLogRecord(rec)
 }
 
 func (kv *keyValues) cutLogRecord(key string) error {
