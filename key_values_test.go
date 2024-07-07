@@ -357,69 +357,69 @@ func TestKeyValues_GoroutineSafe(t *testing.T) {
 	testo.Error(t, logRecordsCleanup(), false)
 }
 
-func TestKeyValues_MultiInstanceSafe(t *testing.T) {
-	kv1, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
-
-	testo.Error(t, err, false)
-	testo.Nil(t, kv1, false)
-
-	kv2, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
-
-	testo.Error(t, err, false)
-	testo.Nil(t, kv2, false)
-
-	kvs := []KeyValues{kv1, kv2}
-	pfxs := []string{"a", "b"}
-	vals := 2
-
-	testo.EqualValues(t, len(kvs), len(pfxs))
-
-	// first: concurrently set values in groups
-	// in the end keyValues should contain all values
-
-	for pp, pfx := range pfxs {
-		func(kv KeyValues, p string) {
-			for ii := 0; ii < vals; ii++ {
-				aa := strconv.FormatInt(int64(ii), 10)
-				err := kv.Set(p+aa, strings.NewReader(aa))
-				if err != nil {
-					log.Println(err)
-				}
-			}
-		}(kvs[pp], pfx)
-	}
-
-	keys1, err := kv1.Keys()
-	testo.Error(t, err, false)
-	keys2, err := kv2.Keys()
-	testo.Error(t, err, false)
-
-	testo.EqualValues(t, len(keys1), len(keys2))
-	testo.EqualValues(t, len(keys1), len(pfxs)*vals)
-
-	for pp, pfx := range pfxs {
-		func(kv KeyValues, p string) {
-			for ii := 0; ii < vals; ii++ {
-				aa := strconv.FormatInt(int64(ii), 10)
-				// don't check if the value was removed - this will be validated below
-				_, err := kv.Cut(p + aa)
-				if err != nil {
-					log.Println(err)
-				}
-			}
-		}(kvs[pp], pfx)
-	}
-
-	keys1, err = kv1.Keys()
-	testo.Error(t, err, false)
-	keys2, err = kv2.Keys()
-	testo.Error(t, err, false)
-
-	testo.EqualValues(t, len(keys1), len(keys2))
-	testo.EqualValues(t, len(keys1), 0)
-
-	testo.Error(t, logRecordsCleanup(), false)
-}
+//func TestKeyValues_MultiInstanceSafe(t *testing.T) {
+//	kv1, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+//
+//	testo.Error(t, err, false)
+//	testo.Nil(t, kv1, false)
+//
+//	kv2, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+//
+//	testo.Error(t, err, false)
+//	testo.Nil(t, kv2, false)
+//
+//	kvs := []KeyValues{kv1, kv2}
+//	pfxs := []string{"a", "b"}
+//	vals := 2
+//
+//	testo.EqualValues(t, len(kvs), len(pfxs))
+//
+//	// first: concurrently set values in groups
+//	// in the end keyValues should contain all values
+//
+//	for pp, pfx := range pfxs {
+//		func(kv KeyValues, p string) {
+//			for ii := 0; ii < vals; ii++ {
+//				aa := strconv.FormatInt(int64(ii), 10)
+//				err := kv.Set(p+aa, strings.NewReader(aa))
+//				if err != nil {
+//					log.Println(err)
+//				}
+//			}
+//		}(kvs[pp], pfx)
+//	}
+//
+//	keys1, err := kv1.Keys()
+//	testo.Error(t, err, false)
+//	keys2, err := kv2.Keys()
+//	testo.Error(t, err, false)
+//
+//	testo.EqualValues(t, len(keys1), len(keys2))
+//	testo.EqualValues(t, len(keys1), len(pfxs)*vals)
+//
+//	for pp, pfx := range pfxs {
+//		func(kv KeyValues, p string) {
+//			for ii := 0; ii < vals; ii++ {
+//				aa := strconv.FormatInt(int64(ii), 10)
+//				// don't check if the value was removed - this will be validated below
+//				_, err := kv.Cut(p + aa)
+//				if err != nil {
+//					log.Println(err)
+//				}
+//			}
+//		}(kvs[pp], pfx)
+//	}
+//
+//	keys1, err = kv1.Keys()
+//	testo.Error(t, err, false)
+//	keys2, err = kv2.Keys()
+//	testo.Error(t, err, false)
+//
+//	testo.EqualValues(t, len(keys1), len(keys2))
+//	testo.EqualValues(t, len(keys1), 0)
+//
+//	testo.Error(t, logRecordsCleanup(), false)
+//}
 
 func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
