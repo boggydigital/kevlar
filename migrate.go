@@ -4,8 +4,10 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/boggydigital/kevlar/kvas_compat"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Migrate transforms kvas index to kevlar log and hash files:
@@ -106,6 +108,34 @@ func Migrate(dir string) error {
 
 	if err = os.Remove(absIndexFilename); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// MigrateAll looks for index files in the provided directory and each
+// subdirectory and migrates every key values store that is found
+func MigrateAll(dir string) error {
+
+	matches := make([]string, 0)
+	if err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(path, kvas_compat.IndexFilename) {
+			matches = append(matches, path)
+			return nil
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	for _, match := range matches {
+		indexDir, _ := filepath.Split(match)
+		if err := Migrate(indexDir); err != nil {
+			return err
+		}
 	}
 
 	return nil
