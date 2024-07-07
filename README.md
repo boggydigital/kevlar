@@ -1,3 +1,3 @@
-# kvas
+# kevlar
 
-`kvas` is a minimal overhead key value store backed by the filesystem.
+`kevlar` is a minimal overhead key value store backed by the filesystem.
