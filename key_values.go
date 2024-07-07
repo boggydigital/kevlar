@@ -22,7 +22,7 @@ const (
 type keyValues struct {
 	dir  string
 	ext  string
-	lmt  time.Time
+	lmt  int64
 	log  logRecords
 	keys map[string]any
 	mtx  *sync.Mutex
@@ -56,10 +56,10 @@ func NewKeyValues(dir, ext string) (KeyValues, error) {
 	return kv, nil
 }
 
-func (kv *keyValues) IsCurrent() (bool, time.Time) {
-	lmt := time.Unix(0, 0)
+func (kv *keyValues) IsCurrent() (bool, int64) {
+	var lmt int64 = -1
 	if fi, err := os.Stat(kv.absLogRecordsFilename()); err == nil {
-		lmt = fi.ModTime()
+		lmt = fi.ModTime().Unix()
 	}
 	return lmt == kv.lmt, lmt
 }
@@ -448,12 +448,18 @@ func (kv *keyValues) IsUpdatedAfter(key string, ts int64) (bool, error) {
 	return len(filtered) > 0, nil
 }
 
-func (kv *keyValues) ModTime(key string) (time.Time, error) {
+func (kv *keyValues) ModTime(key string) (int64, error) {
 	if fi, err := os.Stat(kv.absValueFilename(key)); err == nil {
-		return fi.ModTime(), nil
+		return fi.ModTime().Unix(), nil
 	} else if os.IsNotExist(err) {
-		return time.Unix(0, 0), nil
+		// key could have been deleted - check the log
+		for _, lr := range kv.log {
+			if lr.Id == key && lr.Mt == cut {
+				return lr.Ts, nil
+			}
+		}
+		return -1, nil
 	} else {
-		return time.Unix(0, 0), err
+		return -1, err
 	}
 }

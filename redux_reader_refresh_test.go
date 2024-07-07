@@ -10,8 +10,7 @@ import (
 )
 
 func TestRedux_ModTime(t *testing.T) {
-	start := time.Now()
-	time.Sleep(100 * time.Millisecond)
+	start := time.Now().Unix()
 
 	wrdx, err := NewReduxWriter(filepath.Join(os.TempDir(), testsDirname), "test")
 	testo.Error(t, err, false)
@@ -24,7 +23,7 @@ func TestRedux_ModTime(t *testing.T) {
 
 	rmt, err := rdx.ModTime()
 	testo.Error(t, err, false)
-	testo.EqualValues(t, start.After(rmt), true)
+	testo.CompareInt64(t, rmt, start, testo.Less)
 
 	// second test: add a value and compare redux mod time
 	// expected result: mod time should be greater or equal than start of the test
@@ -33,7 +32,7 @@ func TestRedux_ModTime(t *testing.T) {
 
 	rmt, err = rdx.ModTime()
 	testo.Error(t, err, false)
-	testo.EqualValues(t, rmt.After(start), true)
+	testo.CompareInt64(t, rmt, start, testo.GreaterOrEqual)
 
 	// cleanup
 
@@ -70,12 +69,14 @@ func TestRedux_RefreshReader(t *testing.T) {
 	rdx, ok = rrdx.(*redux)
 	testo.EqualValues(t, ok, true)
 
-	testo.EqualValues(t, rdx.lmt.After(time.Unix(0, 0)), true)
+	mt, err := rdx.ModTime()
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, mt, -1, testo.Greater)
 
 	// second time: don't change modTime and try to RefreshReader again
 	// expected result: no refresh is necessary and modTime is unchanged
 
-	startModTime := rdx.lmt
+	startModTime := mt
 
 	rrdx, err = rdx.RefreshReader()
 	testo.Error(t, err, false)
@@ -83,7 +84,9 @@ func TestRedux_RefreshReader(t *testing.T) {
 	rdx, ok = rrdx.(*redux)
 	testo.EqualValues(t, ok, true)
 
-	testo.EqualValues(t, rdx.lmt, startModTime)
+	newMt, err := rdx.ModTime()
+	testo.Error(t, err, false)
+	testo.EqualValues(t, newMt, startModTime)
 
 	testo.Error(t, logRecordsCleanup(), false)
 }

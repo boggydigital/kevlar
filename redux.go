@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"sync"
-	"time"
 )
 
 func ErrUnknownAsset(asset string) error {
@@ -16,7 +15,7 @@ type redux struct {
 	dir string
 	kv  KeyValues
 	akv map[string]map[string][]string
-	lmt time.Time
+	lmt map[string]int64
 	mtx *sync.Mutex
 }
 
@@ -27,8 +26,13 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 	}
 
 	assetKeyValues := make(map[string]map[string][]string)
+	amts := make(map[string]int64)
 	for _, asset := range assets {
 		if assetKeyValues[asset], err = loadAsset(kv, asset); err != nil {
+			return nil, err
+		}
+		amts[asset], err = kv.ModTime(asset)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -37,7 +41,7 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 		kv:  kv,
 		dir: dir,
 		akv: assetKeyValues,
-		lmt: time.Now(),
+		lmt: amts,
 		mtx: new(sync.Mutex),
 	}, nil
 }

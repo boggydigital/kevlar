@@ -2,7 +2,6 @@ package kevlar
 
 import (
 	"io"
-	"time"
 )
 
 type ReadableRedux interface {
@@ -13,7 +12,7 @@ type ReadableRedux interface {
 	HasValue(asset, key, val string) bool
 	GetAllValues(asset, key string) ([]string, bool)
 	GetLastVal(asset, key string) (string, bool)
-	ModTime() (time.Time, error)
+	ModTime() (int64, error)
 	RefreshReader() (ReadableRedux, error)
 	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
 	Match(query map[string][]string, options ...MatchOption) []string

@@ -24,7 +24,7 @@ func mockKeyValues() *keyValues {
 	return &keyValues{
 		dir: filepath.Join(os.TempDir(), testsDirname),
 		ext: GobExt,
-		lmt: time.Unix(0, 0),
+		lmt: -1,
 		log: []*logRecord{
 			{
 				Ts: 1,
@@ -257,7 +257,7 @@ func TestLocalKeyValues_IsUpdatedAfter(t *testing.T) {
 }
 
 func TestLocalKeyValues_ModTime(t *testing.T) {
-	start := time.Now()
+	start := time.Now().Unix()
 	time.Sleep(100 * time.Millisecond)
 
 	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
@@ -268,16 +268,16 @@ func TestLocalKeyValues_ModTime(t *testing.T) {
 
 	cmt, err := kv.ModTime("1")
 	testo.Error(t, err, false)
-	testo.EqualValues(t, cmt.Before(start), true)
+	testo.CompareInt64(t, cmt, start, testo.Less)
 
 	cmt, err = kv.ModTime("test")
 	testo.Error(t, err, false)
 
-	testo.EqualValues(t, cmt.After(start), true)
+	testo.CompareInt64(t, cmt, start, testo.GreaterOrEqual)
 
 	cmt, err = kv.ModTime("2")
 	testo.Error(t, err, false)
-	testo.EqualValues(t, cmt.Before(start), true)
+	testo.CompareInt64(t, cmt, start, testo.Less)
 
 	ok, err := kv.Cut("test")
 	testo.EqualValues(t, ok, true)
