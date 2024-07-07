@@ -234,7 +234,6 @@ func (kv *keyValues) appendLogRecord(rec *logRecord) error {
 	defer kv.mtx.Unlock()
 
 	kv.log = append(kv.log, rec)
-	kv.lmt = time.Now()
 
 	return kv.createLogRecords()
 
@@ -357,6 +356,10 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 		return nil
 	}
 
+	kv.mtx.Lock()
+	kv.lmt = time.Now()
+	kv.mtx.Unlock()
+
 	if err := kv.createHashFile(key, hash); err != nil {
 		return err
 	}
@@ -388,9 +391,9 @@ func (kv *keyValues) Cut(key string) (bool, error) {
 		return false, err
 	}
 
-	if err := kv.cutLogRecord(key); err != nil {
-		return false, err
-	}
+	kv.mtx.Lock()
+	kv.lmt = time.Now()
+	kv.mtx.Unlock()
 
 	absHashFilename := kv.absHashFilename(key)
 	if _, err := os.Stat(absHashFilename); err == nil {
@@ -404,6 +407,10 @@ func (kv *keyValues) Cut(key string) (bool, error) {
 		if err := os.Remove(absValueFilename); err != nil {
 			return false, err
 		}
+	}
+
+	if err := kv.cutLogRecord(key); err != nil {
+		return false, err
 	}
 
 	return true, nil
