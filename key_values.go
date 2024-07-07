@@ -14,10 +14,9 @@ import (
 )
 
 const (
-	kevlarDirname         = "_kevlar"
-	logRecordsFilename    = "_log.gob"
-	logRecordsModFilename = "_log.mod"
-	hashExt               = ".sha256"
+	kevlarDirname      = "_kevlar"
+	logRecordsFilename = "_log.gob"
+	hashExt            = ".sha256"
 )
 
 type keyValues struct {
@@ -58,20 +57,11 @@ func NewKeyValues(dir, ext string) (KeyValues, error) {
 }
 
 func (kv *keyValues) logRecordsModTime() time.Time {
-	absLogRecordsModFilename := kv.absLogRecordsModFilename()
-
-	logModFile, err := os.Open(absLogRecordsModFilename)
-	if err != nil {
+	if fi, err := os.Stat(kv.absLogRecordsFilename()); err == nil {
+		return fi.ModTime()
+	} else {
 		return time.Unix(0, 0)
 	}
-	defer logModFile.Close()
-
-	var ts time.Time
-	if err := gob.NewDecoder(logModFile).Decode(&ts); err != nil {
-		return time.Unix(0, 0)
-	}
-
-	return ts
 }
 
 func (kv *keyValues) IsCurrent() (bool, time.Time) {
@@ -169,10 +159,6 @@ func (kv *keyValues) absLogRecordsFilename() string {
 	return filepath.Join(kv.dir, kevlarDirname, logRecordsFilename)
 }
 
-func (kv *keyValues) absLogRecordsModFilename() string {
-	return filepath.Join(kv.dir, kevlarDirname, logRecordsModFilename)
-}
-
 func (kv *keyValues) absValueFilename(key string) string {
 	return filepath.Join(kv.dir, busan.Sanitize(key)+kv.ext)
 }
@@ -213,32 +199,6 @@ func (kv *keyValues) currentHash(key string) (string, error) {
 	return sb.String(), nil
 }
 
-func (kv *keyValues) createLogMod() error {
-	absLogRecordsModFilename := kv.absLogRecordsModFilename()
-	dir, _ := filepath.Split(absLogRecordsModFilename)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return err
-		}
-	}
-
-	logModFile, err := os.Create(absLogRecordsModFilename)
-	if err != nil {
-		return err
-	}
-	defer logModFile.Close()
-
-	if err := lockFd(logModFile.Fd()); err != nil {
-		return err
-	}
-
-	if err := gob.NewEncoder(logModFile).Encode(time.Now()); err != nil {
-		return err
-	}
-
-	return unlockFd(logModFile.Fd())
-}
-
 func (kv *keyValues) createLogRecords() error {
 	absLogRecordsFilename := kv.absLogRecordsFilename()
 	dir, _ := filepath.Split(absLogRecordsFilename)
@@ -259,10 +219,6 @@ func (kv *keyValues) createLogRecords() error {
 	}
 
 	if err := gob.NewEncoder(logFile).Encode(kv.log); err != nil {
-		return err
-	}
-
-	if err := kv.createLogMod(); err != nil {
 		return err
 	}
 

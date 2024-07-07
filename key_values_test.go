@@ -57,16 +57,16 @@ func mockKeyValues() *keyValues {
 	}
 }
 
-func logRecordsModCleanup() error {
-	logModPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsModFilename)
-	if _, err := os.Stat(logModPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	return os.Remove(logModPath)
-}
+//func logRecordsModCleanup() error {
+//	logModPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsModFilename)
+//	if _, err := os.Stat(logModPath); err != nil {
+//		if os.IsNotExist(err) {
+//			return nil
+//		}
+//		return err
+//	}
+//	return os.Remove(logModPath)
+//}
 
 func logRecordsCleanup() error {
 	logPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsFilename)
@@ -76,10 +76,7 @@ func logRecordsCleanup() error {
 		}
 		return err
 	}
-	if err := os.Remove(logPath); err != nil {
-		return err
-	}
-	return logRecordsModCleanup()
+	return os.Remove(logPath)
 }
 
 func TestNewKeyValues(t *testing.T) {

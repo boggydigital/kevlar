@@ -17,9 +17,8 @@ import (
 // to get access to internal methods and types (e.g. logRecords)
 // 3) every index record is translated to corresponding log record values
 // 4) hash files are created for each index record with hash
-// 5) log mod time is create with the current timestamp
-// 6) log is written as a single operation (vs kv.appendLogRecord calls)
-// 7) old index is removed to make sure calling migrate again doesn't overwrite new data
+// 5) log is written as a single operation (vs kv.appendLogRecord calls)
+// 6) old index is removed to make sure calling migrate again doesn't overwrite new data
 func Migrate(dir string) error {
 
 	// 1)
@@ -88,12 +87,6 @@ func Migrate(dir string) error {
 
 	// 5)
 
-	if err = kv.createLogMod(); err != nil {
-		return err
-	}
-
-	// 6)
-
 	logRecordsFile, err := os.Create(kv.absLogRecordsFilename())
 	if err != nil {
 		return err
@@ -104,7 +97,7 @@ func Migrate(dir string) error {
 		return err
 	}
 
-	// 7)
+	// 6)
 
 	if err = os.Remove(absIndexFilename); err != nil {
 		return err
