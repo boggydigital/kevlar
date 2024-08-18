@@ -6,7 +6,6 @@ import (
 	"golang.org/x/exp/slices"
 	"io"
 	"log"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -57,7 +56,7 @@ func mockKeyValues() *keyValues {
 	}
 }
 
-//func logRecordsModCleanup() error {
+// func logRecordsModCleanup() error {
 //	logModPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsModFilename)
 //	if _, err := os.Stat(logModPath); err != nil {
 //		if os.IsNotExist(err) {
@@ -284,22 +283,6 @@ func TestLocalKeyValues_ModTime(t *testing.T) {
 	testo.Error(t, err, false)
 
 	testo.Error(t, logRecordsCleanup(), false)
-}
-
-func remove5Values(kv KeyValues, pfx string) {
-	for ii := 0; ii < 5; ii++ {
-
-		aa := strconv.FormatInt(int64(ii), 10)
-		ok, err := kv.Cut(pfx + aa)
-		if err != nil {
-			log.Println(err)
-		}
-		if !ok {
-			log.Println(pfx+aa, "not found")
-		}
-		d := time.Duration(rand.N(5)+1) * time.Millisecond
-		time.Sleep(d)
-	}
 }
 
 func TestKeyValues_GoroutineSafe(t *testing.T) {

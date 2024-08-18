@@ -17,8 +17,7 @@ func (rdx *redux) assetsModTimes() (map[string]int64, error) {
 		if rdx.kv == nil {
 			return nil, errors.New("rdx.kv is nil")
 		}
-		amts[asset], err = rdx.kv.ModTime(asset)
-		if err != nil {
+		if amts[asset], err = rdx.kv.ModTime(asset); err != nil {
 			return nil, err
 		}
 	}
