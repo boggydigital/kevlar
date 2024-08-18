@@ -21,7 +21,7 @@ func (is *sortableIdSet) Swap(i, j int) {
 }
 
 func (is *sortableIdSet) Less(i, j int) bool {
-	for p, _ := range is.properties {
+	for p := range is.properties {
 		if is.ipv[i].values[p] == is.ipv[j].values[p] {
 			continue
 		}

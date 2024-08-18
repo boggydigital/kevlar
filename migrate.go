@@ -111,7 +111,7 @@ func Migrate(dir string) error {
 func MigrateAll(dir string) error {
 
 	matches := make([]string, 0)
-	if err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, _ error) error {
 		if d.IsDir() {
 			return nil
 		}

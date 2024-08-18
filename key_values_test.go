@@ -121,7 +121,9 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 
 				var val []byte
 				buf := bytes.NewBuffer(val)
-				num, err := io.Copy(buf, rc)
+				var cerr error
+				num, cerr := io.Copy(buf, rc)
+				testo.Error(t, cerr, false)
 				testo.EqualValues(t, num, int64(len(gk)))
 				testo.EqualValues(t, gk, buf.String())
 

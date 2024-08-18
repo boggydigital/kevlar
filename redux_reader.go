@@ -31,21 +31,18 @@ func (rdx *redux) HasKey(asset, key string) bool {
 	if akr, ok := rdx.akv[asset]; ok {
 		_, ok = akr[key]
 		return ok
-	} else {
-		return false
 	}
+	return false
 }
 
 func (rdx *redux) HasValue(asset, key, val string) bool {
 	if akr, ok := rdx.akv[asset]; ok {
 		if kr, ok := akr[key]; ok {
 			return slices.Contains(kr, val)
-		} else {
-			return false
 		}
-	} else {
 		return false
 	}
+	return false
 }
 
 func (rdx *redux) GetAllValues(asset, key string) ([]string, bool) {
