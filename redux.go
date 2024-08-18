@@ -12,11 +12,12 @@ func ErrUnknownAsset(asset string) error {
 }
 
 type redux struct {
-	dir string
-	kv  KeyValues
-	akv map[string]map[string][]string
-	lmt map[string]int64
-	mtx *sync.Mutex
+	dir    string
+	kv     KeyValues
+	assets []string
+	akv    map[string]map[string][]string
+	lmt    map[string]int64
+	mtx    *sync.Mutex
 }
 
 func newRedux(dir string, assets ...string) (*redux, error) {
@@ -38,11 +39,12 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 	}
 
 	return &redux{
-		kv:  kv,
-		dir: dir,
-		akv: assetKeyValues,
-		lmt: amts,
-		mtx: new(sync.Mutex),
+		kv:     kv,
+		dir:    dir,
+		assets: assets,
+		akv:    assetKeyValues,
+		lmt:    amts,
+		mtx:    new(sync.Mutex),
 	}, nil
 }
 
