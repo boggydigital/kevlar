@@ -8,3 +8,5 @@ require (
 	github.com/boggydigital/wits v0.2.3
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa
 )
+
+require github.com/boggydigital/nod v0.1.21 // indirect

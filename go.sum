@@ -1,5 +1,7 @@
 github.com/boggydigital/busan v0.1.0 h1:mUpe4b3vdt9Kcf4Z/C2YSuX5L7ru+J/iZW+IcSfW0cM=
 github.com/boggydigital/busan v0.1.0/go.mod h1:0IjeMKwqaO94r8f28at/2UHhqV2FAN6ufFaLEbur/YU=
+github.com/boggydigital/nod v0.1.21 h1:pQbrgswCuU5dr3IWS1Z902PJAm5BebSLG+Q3aG7KJ+4=
+github.com/boggydigital/nod v0.1.21/go.mod h1:bYucIZ3rLHBZKf/3+T+eTSxuijuja7Y6OgU2P6o2/vo=
 github.com/boggydigital/testo v0.1.8 h1:NKuKLpWKn8gG3dYq8xNrFYHimxoCTdzLOs242q6jeQo=
 github.com/boggydigital/testo v0.1.8/go.mod h1:8JTO6UKeQPsHS82vbCH/3NLDfewmr/84vVQ6rNLdCas=
 github.com/boggydigital/wits v0.2.3 h1:Z0eB+QlIA18fJmblyV6ZJQ/swPYSFhOxfgMXOQz4/c8=

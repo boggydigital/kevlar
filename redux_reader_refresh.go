@@ -2,7 +2,7 @@ package kevlar
 
 import (
 	"errors"
-	"log"
+	"github.com/boggydigital/nod"
 )
 
 // assetModTimes returns ModTime for each asset. It doesn't update it
@@ -43,6 +43,20 @@ func (rdx *redux) ModTime() (int64, error) {
 
 func (rdx *redux) refresh() (*redux, error) {
 
+	var recoveredRdx *redux
+
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			nod.Log("kevlar refresh: recovered from panic")
+			recoveredRdx, err = newRedux(rdx.dir, rdx.assets...)
+			if err != nil {
+				nod.Log(err.Error())
+				recoveredRdx = nil
+			}
+		}
+	}()
+
 	if amts, err := rdx.assetsModTimes(); err == nil {
 		for asset := range rdx.akv {
 			// asset was updated externally or not loaded yet
@@ -56,9 +70,13 @@ func (rdx *redux) refresh() (*redux, error) {
 			}
 		}
 	} else {
-		log.Println(err)
+		nod.Log(err.Error())
 		// perform a full redux reload
 		return newRedux(rdx.dir, rdx.assets...)
+	}
+
+	if recoveredRdx != nil {
+		rdx = recoveredRdx
 	}
 
 	return rdx, nil
