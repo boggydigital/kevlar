@@ -1,4 +1,4 @@
-package kevlar
+package kevlar_legacy
 
 func ReduxProxy(idpv map[string]map[string][]string) ReadableRedux {
 	assetKeyValues := make(map[string]map[string][]string)

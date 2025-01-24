@@ -1,4 +1,4 @@
-package kevlar
+package kevlar_legacy
 
 import "sort"
 
