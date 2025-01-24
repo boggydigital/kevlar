@@ -383,3 +383,27 @@ func TestKeyValues_GoroutineSafe(t *testing.T) {
 
 	testo.Error(t, logRecordsCleanup(), false)
 }
+
+func TestKeyValues_NoExternalModificationsAllowed(t *testing.T) {
+
+	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	testo.Nil(t, kv, false)
+	testo.Error(t, err, false)
+
+	err = kv.Set("1", strings.NewReader("1"))
+	testo.Error(t, err, false)
+
+	time.Sleep(time.Millisecond * 1000)
+
+	kvLog, err := os.Create(filepath.Join(os.TempDir(), testsDirname, logRecordsFilename))
+	testo.Error(t, err, false)
+
+	_, err = io.WriteString(kvLog, "")
+	testo.Error(t, err, false)
+
+	// this should return error as the log has been modified externally
+	err = kv.Set("1", strings.NewReader("2"))
+	testo.Error(t, err, true)
+
+	testo.Error(t, logRecordsCleanup(), false)
+}
