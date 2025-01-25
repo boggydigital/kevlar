@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"errors"
 	"github.com/boggydigital/busan"
 	"io"
 	"iter"
@@ -27,7 +26,6 @@ type keyValues struct {
 	dir string
 	ext string
 	log logRecords
-	lmt int64
 	mtx *sync.Mutex
 }
 
@@ -46,7 +44,6 @@ func NewKeyValues(dir, ext string) (KeyValues, error) {
 		dir: dir,
 		ext: ext,
 		mtx: new(sync.Mutex),
-		lmt: UnknownModTime,
 	}
 
 	if err := kv.loadLogRecords(); os.IsNotExist(err) {
@@ -112,7 +109,7 @@ func (kv *keyValues) absValueFilename(key string) string {
 	return filepath.Join(kv.dir, busan.Sanitize(key)+kv.ext)
 }
 
-func (kv *keyValues) writeAtomically(path string, r io.Reader, lmt int64) error {
+func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
 
 	newPath := path + newExt
 
@@ -121,15 +118,6 @@ func (kv *keyValues) writeAtomically(path string, r io.Reader, lmt int64) error 
 		return err
 	}
 	defer newFile.Close()
-
-	if lmt > UnknownModTime {
-		if st, err := newFile.Stat(); err == nil {
-			stmt := st.ModTime().UTC().Unix()
-			if stmt > lmt {
-				return errors.New("kevlar: atomic file has been modified out of process")
-			}
-		}
-	}
 
 	if _, err := io.Copy(newFile, r); err != nil {
 		return err
@@ -213,10 +201,9 @@ func (kv *keyValues) writeLogRecord(rec *logRecord) error {
 		return err
 	}
 
-	if err := kv.writeAtomically(kv.absLogRecordsFilename(), &buf, kv.lmt); err != nil {
+	if err := kv.writeAtomically(kv.absLogRecordsFilename(), &buf); err != nil {
 		return err
 	}
-	kv.lmt = timeNow()
 	kv.mtx.Unlock()
 
 	return nil
@@ -302,7 +289,7 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 	}
 
 	kv.mtx.Lock()
-	if err := kv.writeAtomically(kv.absValueFilename(key), &buf, kv.ValueModTime(key)); err != nil {
+	if err := kv.writeAtomically(kv.absValueFilename(key), &buf); err != nil {
 		return err
 	}
 	kv.mtx.Unlock()
