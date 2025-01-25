@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	testsDirname = "kevlar_tests"
+	testDir = "kevlar_test"
 )
 
 func mockKeyValues() *keyValues {
 	return &keyValues{
-		dir: filepath.Join(os.TempDir(), testsDirname),
+		dir: filepath.Join(os.TempDir(), testDir),
 		ext: GobExt,
 		log: []*logRecord{
 			{
@@ -54,7 +54,7 @@ func mockKeyValues() *keyValues {
 }
 
 func logRecordsCleanup() error {
-	logPath := filepath.Join(os.TempDir(), testsDirname, logRecordsFilename)
+	logPath := filepath.Join(os.TempDir(), testDir, logRecordsFilename)
 	if _, err := os.Stat(logPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -64,7 +64,7 @@ func logRecordsCleanup() error {
 	if err := os.Remove(logPath); err != nil {
 		return err
 	}
-	return os.RemoveAll(filepath.Join(os.TempDir(), testsDirname))
+	return os.RemoveAll(filepath.Join(os.TempDir(), testDir))
 }
 
 func TestNewKeyValues(t *testing.T) {
@@ -85,7 +85,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+			kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 			testo.Nil(t, kv, false)
 			testo.Error(t, err, false)
 
@@ -250,7 +250,7 @@ func TestLocalKeyValues_ValueModTime(t *testing.T) {
 	start := time.Now().Unix()
 	time.Sleep(100 * time.Millisecond)
 
-	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
 
@@ -277,7 +277,7 @@ func TestLocalKeyValues_ValueModTime(t *testing.T) {
 }
 
 func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
-	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -307,7 +307,7 @@ func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 
 func TestKeyValues_CutCompactsLog(t *testing.T) {
 
-	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -338,7 +338,7 @@ func TestKeyValues_CutCompactsLog(t *testing.T) {
 }
 
 func TestKeyValues_GoroutineSafe(t *testing.T) {
-	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
