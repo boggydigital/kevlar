@@ -2,6 +2,7 @@ package kevlar
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"errors"
 	"github.com/boggydigital/busan"
@@ -69,6 +70,12 @@ func createWriteOnlyFile(path string) (*os.File, error) {
 	// - it's unclear what state existing file is, so it's not worth trying to salvage it
 	// - instead we're just ignoring it to avoid blocking (hopefully) good operations
 	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+}
+
+func sha256Bytes(reader io.Reader) ([]byte, error) {
+	h := sha256.New()
+	_, err := io.Copy(h, reader)
+	return h.Sum(nil), err
 }
 
 func (kv *keyValues) loadLogRecords() error {
@@ -283,7 +290,7 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 	tr := io.TeeReader(reader, &buf)
 
 	// check if value already exists and has the same hash
-	hash, err := Sha256(tr)
+	hash, err := sha256Bytes(tr)
 	if err != nil {
 		return err
 	}
