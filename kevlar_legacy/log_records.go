@@ -1,9 +1,9 @@
 package kevlar_legacy
 
-type logRecord struct {
+type LogRecord struct {
 	Ts int64
-	Mt mutationType
+	Mt MutationType
 	Id string
 }
 
-type logRecords []*logRecord
+type LogRecords []*LogRecord

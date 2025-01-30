@@ -24,30 +24,30 @@ func mockKeyValues() *keyValues {
 		dir: filepath.Join(os.TempDir(), testsDirname),
 		ext: GobExt,
 		lmt: -1,
-		log: []*logRecord{
+		log: []*LogRecord{
 			{
 				Ts: 1,
-				Mt: create,
+				Mt: Create,
 				Id: "1",
 			},
 			{
 				Ts: 2,
-				Mt: create,
+				Mt: Create,
 				Id: "2",
 			},
 			{
 				Ts: 3,
-				Mt: update,
+				Mt: Update,
 				Id: "2",
 			},
 			{
 				Ts: 4,
-				Mt: create,
+				Mt: Create,
 				Id: "3",
 			},
 			{
 				Ts: 5,
-				Mt: cut,
+				Mt: Cut,
 				Id: "1",
 			},
 		},
@@ -57,7 +57,7 @@ func mockKeyValues() *keyValues {
 }
 
 // func logRecordsModCleanup() error {
-//	logModPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsModFilename)
+//	logModPath := filepath.Join(os.TempDir(), testsDirname, KevlarDirname, logRecordsModFilename)
 //	if _, err := os.Stat(logModPath); err != nil {
 //		if os.IsNotExist(err) {
 //			return nil
@@ -68,7 +68,7 @@ func mockKeyValues() *keyValues {
 //}
 
 func logRecordsCleanup() error {
-	logPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsFilename)
+	logPath := filepath.Join(os.TempDir(), testsDirname, KevlarDirname, LogRecordsFilename)
 	if _, err := os.Stat(logPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -417,16 +417,16 @@ func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 	testo.EqualValues(t, len(kv.log), 0)
 
 	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
-	testo.EqualValues(t, len(kv.log), 1) // added create record
+	testo.EqualValues(t, len(kv.log), 1) // added Create record
 
 	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
 	testo.EqualValues(t, len(kv.log), 1) // no writes happened, same content, no new log records
 
 	testo.Error(t, kv.Set("1", strings.NewReader("2")), false)
-	testo.EqualValues(t, len(kv.log), 2) // added update record
+	testo.EqualValues(t, len(kv.log), 2) // added Update record
 
 	testo.Error(t, kv.Set("1", strings.NewReader("3")), false)
-	testo.EqualValues(t, len(kv.log), 2) // existing update record updated, no new log records
+	testo.EqualValues(t, len(kv.log), 2) // existing Update record updated, no new log records
 
 	ok, err = kv.Cut("1")
 	testo.EqualValues(t, ok, true)

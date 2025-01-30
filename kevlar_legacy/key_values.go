@@ -14,16 +14,16 @@ import (
 )
 
 const (
-	kevlarDirname      = "_kevlar"
-	logRecordsFilename = "_log.gob"
-	hashExt            = ".sha256"
+	KevlarDirname      = "_kevlar"
+	LogRecordsFilename = "_log.gob"
+	HashExt            = ".sha256"
 )
 
 type keyValues struct {
 	dir  string
 	ext  string
 	lmt  int64
-	log  logRecords
+	log  LogRecords
 	keys map[string]any
 	mtx  *sync.Mutex
 }
@@ -109,11 +109,11 @@ func (kv *keyValues) refreshKeys() error {
 	uks := make(map[string]any)
 	for _, lr := range kv.log {
 		switch lr.Mt {
-		case create:
+		case Create:
 			fallthrough
-		case update:
+		case Update:
 			uks[lr.Id] = nil
-		case cut:
+		case Cut:
 			delete(uks, lr.Id)
 		default:
 			panic("unknown log record mutation type")
@@ -153,7 +153,7 @@ func (kv *keyValues) Has(key string) (bool, error) {
 }
 
 func (kv *keyValues) absLogRecordsFilename() string {
-	return filepath.Join(kv.dir, kevlarDirname, logRecordsFilename)
+	return filepath.Join(kv.dir, KevlarDirname, LogRecordsFilename)
 }
 
 func (kv *keyValues) absValueFilename(key string) string {
@@ -161,7 +161,7 @@ func (kv *keyValues) absValueFilename(key string) string {
 }
 
 func (kv *keyValues) absHashFilename(key string) string {
-	return filepath.Join(kv.dir, kevlarDirname, busan.Sanitize(key)+hashExt)
+	return filepath.Join(kv.dir, KevlarDirname, busan.Sanitize(key)+HashExt)
 }
 
 func (kv *keyValues) Get(key string) (io.ReadCloser, error) {
@@ -222,7 +222,7 @@ func (kv *keyValues) createLogRecords() error {
 	return unlockFd(logFile.Fd())
 }
 
-func (kv *keyValues) appendLogRecord(rec *logRecord) error {
+func (kv *keyValues) appendLogRecord(rec *LogRecord) error {
 	if err := kv.refreshLogRecords(); err != nil {
 		return err
 	}
@@ -237,14 +237,14 @@ func (kv *keyValues) appendLogRecord(rec *logRecord) error {
 }
 
 func (kv *keyValues) createLogRecord(key string) error {
-	// adding the key right away to respond to Has queries before log update
+	// adding the key right away to respond to Has queries before log Update
 	kv.mtx.Lock()
 	kv.keys[key] = nil
 	kv.mtx.Unlock()
 
-	rec := &logRecord{
+	rec := &LogRecord{
 		Ts: time.Now().Unix(),
-		Mt: create,
+		Mt: Create,
 		Id: key,
 	}
 
@@ -255,7 +255,7 @@ func (kv *keyValues) updateLogRecord(key string) error {
 	kv.mtx.Lock()
 	updated := false
 	for _, rec := range kv.log {
-		if rec.Id == key && rec.Mt == update {
+		if rec.Id == key && rec.Mt == Update {
 			rec.Ts = time.Now().Unix()
 			updated = true
 			break
@@ -266,9 +266,9 @@ func (kv *keyValues) updateLogRecord(key string) error {
 	if updated {
 		return kv.createLogRecords()
 	} else {
-		rec := &logRecord{
+		rec := &LogRecord{
 			Ts: time.Now().Unix(),
-			Mt: update,
+			Mt: Update,
 			Id: key,
 		}
 		return kv.appendLogRecord(rec)
@@ -288,9 +288,9 @@ func (kv *keyValues) createOrUpdateLogRecord(key string) error {
 }
 
 func (kv *keyValues) cutLogRecord(key string) error {
-	rec := &logRecord{
+	rec := &LogRecord{
 		Ts: time.Now().Unix(),
-		Mt: cut,
+		Mt: Cut,
 		Id: key,
 	}
 
@@ -366,7 +366,7 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 }
 
 // Cut removes the value from storage in the following sequence of events:
-// - cut operation log value is added
+// - Cut operation log value is added
 // - stored hash value is removed
 // - stored value is removed
 func (kv *keyValues) Cut(key string) (bool, error) {
@@ -399,7 +399,7 @@ func (kv *keyValues) Cut(key string) (bool, error) {
 	return true, nil
 }
 
-func (kv *keyValues) filterLog(m func(*logRecord) bool) ([]string, error) {
+func (kv *keyValues) filterLog(m func(*LogRecord) bool) ([]string, error) {
 	if err := kv.refreshLogRecords(); err != nil {
 		return nil, err
 	}
@@ -408,7 +408,7 @@ func (kv *keyValues) filterLog(m func(*logRecord) bool) ([]string, error) {
 		if m(lr) {
 			matches[lr.Id] = nil
 		}
-		if lr.Mt == cut {
+		if lr.Mt == Cut {
 			delete(matches, lr.Id)
 		}
 	}
@@ -416,31 +416,31 @@ func (kv *keyValues) filterLog(m func(*logRecord) bool) ([]string, error) {
 }
 
 func (kv *keyValues) CreatedAfter(ts int64) ([]string, error) {
-	return kv.filterLog(func(r *logRecord) bool {
-		return r.Mt == create && r.Ts >= ts
+	return kv.filterLog(func(r *LogRecord) bool {
+		return r.Mt == Create && r.Ts >= ts
 	})
 }
 
 func (kv *keyValues) UpdatedAfter(ts int64) ([]string, error) {
-	return kv.filterLog(func(r *logRecord) bool {
-		return r.Mt == update && r.Ts >= ts
+	return kv.filterLog(func(r *LogRecord) bool {
+		return r.Mt == Update && r.Ts >= ts
 	})
 }
 
 func (kv *keyValues) CreatedOrUpdatedAfter(ts int64) ([]string, error) {
-	return kv.filterLog(func(r *logRecord) bool {
-		createdAfter := r.Mt == create && r.Ts >= ts
-		updatedAfter := r.Mt == update && r.Ts >= ts
+	return kv.filterLog(func(r *LogRecord) bool {
+		createdAfter := r.Mt == Create && r.Ts >= ts
+		updatedAfter := r.Mt == Update && r.Ts >= ts
 		return createdAfter || updatedAfter
 	})
 }
 
 func (kv *keyValues) IsUpdatedAfter(key string, ts int64) (bool, error) {
-	filtered, err := kv.filterLog(func(r *logRecord) bool {
+	filtered, err := kv.filterLog(func(r *LogRecord) bool {
 		if r.Id != key {
 			return false
 		}
-		return r.Mt == update && r.Ts >= ts
+		return r.Mt == Update && r.Ts >= ts
 	})
 	if err != nil {
 		return false, err
@@ -454,7 +454,7 @@ func (kv *keyValues) ModTime(key string) (int64, error) {
 	} else if os.IsNotExist(err) {
 		// key could have been deleted - check the log
 		for _, lr := range kv.log {
-			if lr.Id == key && lr.Mt == cut {
+			if lr.Id == key && lr.Mt == Cut {
 				return lr.Ts, nil
 			}
 		}

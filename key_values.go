@@ -194,7 +194,9 @@ func (kv *keyValues) cutLogRecord(key string) error {
 func (kv *keyValues) writeLogRecord(rec *logRecord) error {
 
 	kv.mtx.Lock()
-	kv.log = append(kv.log, rec)
+	if rec != nil {
+		kv.log = append(kv.log, rec)
+	}
 
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(kv.log); err != nil {

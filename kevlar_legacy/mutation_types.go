@@ -1,9 +1,9 @@
 package kevlar_legacy
 
-type mutationType int
+type MutationType int
 
 const (
-	create mutationType = iota
-	update
-	cut
+	Create MutationType = iota
+	Update
+	Cut
 )

@@ -5,7 +5,7 @@ import (
 	"github.com/boggydigital/nod"
 )
 
-// assetModTimes returns ModTime for each asset. It doesn't update it
+// assetModTimes returns ModTime for each asset. It doesn't Update it
 // because that time should be updated only when asset is loaded
 func (rdx *redux) assetsModTimes() (map[string]int64, error) {
 	amts := make(map[string]int64)
