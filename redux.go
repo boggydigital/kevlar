@@ -32,9 +32,7 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 		if assetKeyValues[asset], err = loadAsset(kv, asset); err != nil {
 			return nil, err
 		}
-		if amts[asset], err = kv.ModTime(asset); err != nil {
-			return nil, err
-		}
+		amts[asset] = kv.ValueModTime(asset)
 	}
 
 	return &redux{
@@ -49,10 +47,7 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 
 func loadAsset(kv KeyValues, asset string) (map[string][]string, error) {
 
-	ok, err := kv.Has(asset)
-	if err != nil {
-		return nil, err
-	}
+	ok := kv.Has(asset)
 	if !ok {
 		return make(map[string][]string), nil
 	}

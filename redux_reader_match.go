@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+type MatchOption int
+
+const (
+	CaseSensitive = iota
+	FullMatch
+)
+
 func (rdx *redux) MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string {
 	if scope == nil {
 		scope = rdx.Keys(asset)

@@ -1,135 +1,145 @@
 package kevlar
 
 import (
+	"bytes"
 	"encoding/gob"
-	"errors"
-	"github.com/boggydigital/kevlar/kvas_compat"
-	"io/fs"
+	"encoding/hex"
+	"github.com/boggydigital/kevlar/kevlar_legacy"
+	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"sync"
 )
 
-// Migrate transforms kvas index to kevlar log and hash files:
-// 0) not part of this method - make sure to create backups before migration!
-// 1) existing index file is decoded to get created, modified dates and hashes
-// 2) new keyValues is connected to the same directory and cast to specific type
-// to get access to internal methods and types (e.g. logRecords)
-// 3) every index record is translated to corresponding log record values
-// 4) hash files are created for each index record with hash
-// 5) log is written as a single operation (vs kv.appendLogRecord calls)
-// 6) old index is removed to make sure calling migrate again doesn't overwrite new data
-func Migrate(dir string) error {
+func Migrate(dir string, ext string) error {
 
-	// 1)
-
-	absIndexFilename := filepath.Join(dir, kvas_compat.IndexFilename)
-
-	if _, err := os.Stat(absIndexFilename); os.IsNotExist(err) {
-		// if index file doesn't exist - don't throw error
-		// assuming the migration already happened and there's
-		// nothing else to do
+	// load legacy log
+	absLegacyLogFilename := filepath.Join(dir, kevlar_legacy.KevlarDirname, logRecordsFilename)
+	if _, err := os.Stat(absLegacyLogFilename); os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	indexFile, err := os.Open(absIndexFilename)
+	logFile, err := os.Open(absLegacyLogFilename)
 	if err != nil {
 		return err
 	}
-	defer indexFile.Close()
+	defer logFile.Close()
 
-	var index kvas_compat.Index
+	var legacyLog kevlar_legacy.LogRecords
 
-	if err = gob.NewDecoder(indexFile).Decode(&index); err != nil {
+	if err := gob.NewDecoder(logFile).Decode(&legacyLog); err == io.EOF {
+		// do nothing - empty log will be initialized later
+	} else if err != nil {
 		return err
 	}
 
-	// 2)
-
-	// we won't be writing anything that requires extension, so it
-	// can safely be set to an empty string
-	ikv, err := NewKeyValues(dir, "")
-	if err != nil {
-		return err
+	// load legacy hashes
+	legacyHashes := make(map[string][]byte)
+	for _, lr := range legacyLog {
+		id := lr.Id
+		hash, err := readLegacyHash(id, dir)
+		if err != nil {
+			return err
+		}
+		legacyHashes[id] = hash
 	}
 
-	kv, ok := ikv.(*keyValues)
-	if !ok {
-		return errors.New("kevlar: unable to cast interface to a specific type")
-	}
+	// recreate new log
 
-	// 3)
+	var newLogRecords logRecords
 
-	for id, indexRecord := range index {
+	for _, llr := range legacyLog {
 
-		kv.log = append(kv.log, &logRecord{
-			Ts: indexRecord.Created,
-			Mt: create,
-			Id: id,
-		})
-
-		if indexRecord.Modified > indexRecord.Created {
-			kv.log = append(kv.log, &logRecord{
-				Ts: indexRecord.Modified,
-				Mt: update,
-				Id: id,
-			})
+		newLr := &logRecord{
+			Id:   llr.Id,
+			Ts:   llr.Ts,
+			Mt:   mapMutationType(llr.Mt),
+			Hash: legacyHashes[llr.Id],
 		}
 
-		// 4)
+		newLogRecords = append(newLogRecords, newLr)
+	}
 
-		if err = kv.createHashFile(id, indexRecord.Hash); err != nil {
+	kv := &keyValues{
+		dir: dir,
+		ext: ext,
+		log: newLogRecords,
+		mtx: new(sync.Mutex),
+	}
+
+	if err := kv.writeLogRecord(nil); err != nil {
+		return err
+	}
+
+	// delete legacy filed (log, hashes)
+
+	for id := range legacyHashes {
+		hashFilename := filepath.Join(dir, kevlar_legacy.KevlarDirname, id+kevlar_legacy.HashExt)
+		if _, err := os.Stat(hashFilename); os.IsNotExist(err) {
+			continue
+		}
+		if err := os.Remove(hashFilename); err != nil {
 			return err
 		}
 	}
 
-	// 5)
-
-	logRecordsFile, err := os.Create(kv.absLogRecordsFilename())
-	if err != nil {
-		return err
-	}
-	defer logRecordsFile.Close()
-
-	if err = gob.NewEncoder(logRecordsFile).Encode(kv.log); err != nil {
+	if err := os.Remove(absLegacyLogFilename); err != nil {
 		return err
 	}
 
-	// 6)
-
-	if err = os.Remove(absIndexFilename); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Remove(filepath.Join(dir, kevlar_legacy.KevlarDirname))
 }
 
-// MigrateAll looks for index files in the provided directory and each
-// subdirectory and migrates every key values store that is found
-func MigrateAll(dir string) error {
+func readLegacyHash(id, dir string) ([]byte, error) {
 
-	matches := make([]string, 0)
-	if err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, _ error) error {
-		if d.IsDir() {
-			return nil
-		}
-		if strings.HasSuffix(path, kvas_compat.IndexFilename) {
-			matches = append(matches, path)
-			return nil
-		}
-		return nil
-	}); err != nil {
-		return err
+	hashFilename := filepath.Join(dir, kevlar_legacy.KevlarDirname, id+kevlar_legacy.HashExt)
+
+	if _, err := os.Stat(hashFilename); os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
 	}
 
-	for _, match := range matches {
-		indexDir, _ := filepath.Split(match)
-		if err := Migrate(indexDir); err != nil {
-			return err
-		}
+	hashFile, err := os.Open(hashFilename)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, hashFile); err != nil {
+		return nil, err
+	}
+
+	return hex.DecodeString(buf.String())
+}
+
+func hashFile(id, dir, ext string) ([]byte, error) {
+	filename := filepath.Join(dir, id+ext)
+
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return sha256Bytes(file)
+}
+
+func mapMutationType(mt kevlar_legacy.MutationType) mutationType {
+	switch mt {
+	case kevlar_legacy.Create:
+		return create
+	case kevlar_legacy.Update:
+		return update
+	case kevlar_legacy.Cut:
+		return cut
+	}
+	return create
 }

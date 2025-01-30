@@ -3,11 +3,10 @@ package kevlar
 import (
 	"bytes"
 	"github.com/boggydigital/testo"
-	"golang.org/x/exp/slices"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,14 +15,13 @@ import (
 )
 
 const (
-	testsDirname = "kevlar_tests"
+	testDir = "kevlar_test"
 )
 
 func mockKeyValues() *keyValues {
 	return &keyValues{
-		dir: filepath.Join(os.TempDir(), testsDirname),
+		dir: filepath.Join(os.TempDir(), testDir),
 		ext: GobExt,
-		lmt: -1,
 		log: []*logRecord{
 			{
 				Ts: 1,
@@ -51,31 +49,22 @@ func mockKeyValues() *keyValues {
 				Id: "1",
 			},
 		},
-		keys: nil,
-		mtx:  new(sync.Mutex),
+		mtx: new(sync.Mutex),
 	}
 }
 
-// func logRecordsModCleanup() error {
-//	logModPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsModFilename)
-//	if _, err := os.Stat(logModPath); err != nil {
-//		if os.IsNotExist(err) {
-//			return nil
-//		}
-//		return err
-//	}
-//	return os.Remove(logModPath)
-//}
-
 func logRecordsCleanup() error {
-	logPath := filepath.Join(os.TempDir(), testsDirname, kevlarDirname, logRecordsFilename)
+	logPath := filepath.Join(os.TempDir(), testDir, logRecordsFilename)
 	if _, err := os.Stat(logPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return err
 	}
-	return os.Remove(logPath)
+	if err := os.Remove(logPath); err != nil {
+		return err
+	}
+	return os.RemoveAll(filepath.Join(os.TempDir(), testDir))
 }
 
 func TestNewKeyValues(t *testing.T) {
@@ -89,14 +78,14 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 		set []string
 		get map[string]bool
 	}{
-		//{nil, nil},
-		//{[]string{"x1", "x1"}, map[string]bool{"x1": false}},
+		{nil, nil},
+		{[]string{"x1", "x1"}, map[string]bool{"x1": false}},
 		{[]string{"y1", "y2"}, map[string]bool{"y1": false, "y2": false, "y3": true}},
 	}
 
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+			kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 			testo.Nil(t, kv, false)
 			testo.Error(t, err, false)
 
@@ -104,9 +93,8 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 			for _, sk := range tt.set {
 				err := kv.Set(sk, strings.NewReader(sk))
 				testo.Error(t, err, false)
-				has, err := kv.Has(sk)
+				has := kv.Has(sk)
 				testo.EqualValues(t, has, true)
-				testo.Error(t, err, false)
 			}
 
 			// Get tests
@@ -132,8 +120,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 
 			// Cut, Has tests
 			for _, ck := range tt.set {
-				has, err := kv.Has(ck)
-				testo.Error(t, err, false)
+				has := kv.Has(ck)
 				ok, err := kv.Cut(ck)
 				testo.EqualValues(t, ok, has)
 				testo.Error(t, err, false)
@@ -163,12 +150,13 @@ func TestLocalKeyValues_CreatedAfter(t *testing.T) {
 	kv := mockKeyValues()
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ca, err := kv.CreatedAfter(tt.after)
-			testo.Error(t, err, false)
-			testo.EqualValues(t, len(ca), len(tt.exp))
-			for _, cav := range ca {
+			ca := kv.CreatedAfter(tt.after)
+			caLen := 0
+			for cav := range ca {
+				caLen++
 				testo.EqualValues(t, slices.Contains(tt.exp, cav), true)
 			}
+			testo.EqualValues(t, caLen, len(tt.exp))
 		})
 	}
 }
@@ -190,12 +178,13 @@ func TestLocalKeyValues_UpdatedAfter(t *testing.T) {
 	kv := mockKeyValues()
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ma, err := kv.UpdatedAfter(tt.after)
-			testo.Error(t, err, false)
-			testo.EqualValues(t, len(ma), len(tt.exp))
-			for _, mav := range ma {
-				testo.EqualValues(t, slices.Contains(tt.exp, mav), true)
+			ua := kv.UpdatedAfter(tt.after)
+			uaLen := 0
+			for uav := range ua {
+				uaLen++
+				testo.EqualValues(t, slices.Contains(tt.exp, uav), true)
 			}
+			testo.EqualValues(t, uaLen, len(tt.exp))
 		})
 	}
 }
@@ -218,12 +207,13 @@ func TestLocalKeyValues_CreatedOrUpdatedAfter(t *testing.T) {
 	kv := mockKeyValues()
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ma, err := kv.CreatedOrUpdatedAfter(tt.after)
-			testo.Error(t, err, false)
-			testo.EqualValues(t, len(ma), len(tt.exp))
-			for _, mav := range ma {
-				testo.EqualValues(t, slices.Contains(tt.exp, mav), true)
+			cua := kv.CreatedOrUpdatedAfter(tt.after)
+			cuaLen := 0
+			for cuav := range cua {
+				cuaLen++
+				testo.EqualValues(t, slices.Contains(tt.exp, cuav), true)
 			}
+			testo.EqualValues(t, cuaLen, len(tt.exp))
 		})
 	}
 }
@@ -250,33 +240,32 @@ func TestLocalKeyValues_IsUpdatedAfter(t *testing.T) {
 	kv := mockKeyValues()
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ok, err := kv.IsUpdatedAfter(tt.key, tt.after)
-			testo.Error(t, err, false)
+			ok := kv.IsUpdatedAfter(tt.key, tt.after)
 			testo.EqualValues(t, ok, tt.exp)
 		})
 	}
 }
 
-func TestLocalKeyValues_ModTime(t *testing.T) {
+func TestLocalKeyValues_ValueModTime(t *testing.T) {
 	start := time.Now().Unix()
 	time.Sleep(100 * time.Millisecond)
 
-	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
 
 	testo.Error(t, kv.Set("test", strings.NewReader("test")), false)
 
-	cmt, err := kv.ModTime("1")
+	cmt := kv.ValueModTime("1")
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, cmt, start, testo.Less)
 
-	cmt, err = kv.ModTime("test")
+	cmt = kv.ValueModTime("test")
 	testo.Error(t, err, false)
 
 	testo.CompareInt64(t, cmt, start, testo.GreaterOrEqual)
 
-	cmt, err = kv.ModTime("2")
+	cmt = kv.ValueModTime("2")
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, cmt, start, testo.Less)
 
@@ -287,127 +276,8 @@ func TestLocalKeyValues_ModTime(t *testing.T) {
 	testo.Error(t, logRecordsCleanup(), false)
 }
 
-func TestKeyValues_GoroutineSafe(t *testing.T) {
-	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
-
-	testo.Nil(t, kv, false)
-	testo.Error(t, err, false)
-
-	pfxs := []string{"a", "b"}
-	vals := 5
-
-	// first: concurrently set values in groups
-	// in the end keyValues should contain all values
-
-	var wg sync.WaitGroup
-	for _, pfx := range pfxs {
-		wg.Add(1)
-		go func(kv KeyValues, p string) {
-			defer wg.Done()
-			for ii := 0; ii < vals; ii++ {
-				aa := strconv.FormatInt(int64(ii), 10)
-				err := kv.Set(p+aa, strings.NewReader(aa))
-				if err != nil {
-					log.Println(err)
-				}
-			}
-		}(kv, pfx)
-	}
-	wg.Wait()
-
-	keys, err := kv.Keys()
-	testo.Error(t, err, false)
-	testo.EqualValues(t, len(keys), len(pfxs)*vals)
-
-	for _, pfx := range pfxs {
-		wg.Add(1)
-		go func(kv KeyValues, p string) {
-			defer wg.Done()
-			for ii := 0; ii < vals; ii++ {
-				aa := strconv.FormatInt(int64(ii), 10)
-				// don't check if the value was removed - this will be validated below
-				_, err := kv.Cut(p + aa)
-				if err != nil {
-					log.Println(err)
-				}
-			}
-		}(kv, pfx)
-	}
-	wg.Wait()
-
-	keys, err = kv.Keys()
-	testo.Error(t, err, false)
-	testo.EqualValues(t, len(keys), 0)
-
-	testo.Error(t, logRecordsCleanup(), false)
-}
-
-//func TestKeyValues_MultiInstanceSafe(t *testing.T) {
-//	kv1, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
-//
-//	testo.Error(t, err, false)
-//	testo.Nil(t, kv1, false)
-//
-//	kv2, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
-//
-//	testo.Error(t, err, false)
-//	testo.Nil(t, kv2, false)
-//
-//	kvs := []KeyValues{kv1, kv2}
-//	pfxs := []string{"a", "b"}
-//	vals := 2
-//
-//	testo.EqualValues(t, len(kvs), len(pfxs))
-//
-//	// first: concurrently set values in groups
-//	// in the end keyValues should contain all values
-//
-//	for pp, pfx := range pfxs {
-//		func(kv KeyValues, p string) {
-//			for ii := 0; ii < vals; ii++ {
-//				aa := strconv.FormatInt(int64(ii), 10)
-//				err := kv.Set(p+aa, strings.NewReader(aa))
-//				if err != nil {
-//					log.Println(err)
-//				}
-//			}
-//		}(kvs[pp], pfx)
-//	}
-//
-//	keys1, err := kv1.Keys()
-//	testo.Error(t, err, false)
-//	keys2, err := kv2.Keys()
-//	testo.Error(t, err, false)
-//
-//	testo.EqualValues(t, len(keys1), len(keys2))
-//	testo.EqualValues(t, len(keys1), len(pfxs)*vals)
-//
-//	for pp, pfx := range pfxs {
-//		func(kv KeyValues, p string) {
-//			for ii := 0; ii < vals; ii++ {
-//				aa := strconv.FormatInt(int64(ii), 10)
-//				// don't check if the value was removed - this will be validated below
-//				_, err := kv.Cut(p + aa)
-//				if err != nil {
-//					log.Println(err)
-//				}
-//			}
-//		}(kvs[pp], pfx)
-//	}
-//
-//	keys1, err = kv1.Keys()
-//	testo.Error(t, err, false)
-//	keys2, err = kv2.Keys()
-//	testo.Error(t, err, false)
-//
-//	testo.EqualValues(t, len(keys1), len(keys2))
-//	testo.EqualValues(t, len(keys1), 0)
-//
-//	testo.Error(t, logRecordsCleanup(), false)
-//}
-
 func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
-	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testsDirname), GobExt)
+	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -431,6 +301,85 @@ func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 	ok, err = kv.Cut("1")
 	testo.EqualValues(t, ok, true)
 	testo.Error(t, err, false)
+
+	testo.Error(t, logRecordsCleanup(), false)
+}
+
+func TestKeyValues_CutCompactsLog(t *testing.T) {
+
+	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+	testo.Error(t, err, false)
+
+	kv, ok := ikv.(*keyValues)
+	testo.EqualValues(t, ok, true)
+	testo.Nil(t, kv, false)
+
+	testo.EqualValues(t, len(kv.log), 0)
+
+	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
+	testo.EqualValues(t, len(kv.log), 1) // added create record
+
+	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
+	testo.EqualValues(t, len(kv.log), 1) // no writes happened, same content, no new log records
+
+	testo.Error(t, kv.Set("1", strings.NewReader("2")), false)
+	testo.EqualValues(t, len(kv.log), 2) // added update record
+
+	testo.Error(t, kv.Set("1", strings.NewReader("3")), false)
+	testo.EqualValues(t, len(kv.log), 2) // existing update record updated, no new log records
+
+	ok, err = kv.Cut("1")
+	testo.EqualValues(t, len(kv.log), 1) // log has been compacted to only store cut operation
+	testo.EqualValues(t, ok, true)
+	testo.Error(t, err, false)
+
+	testo.Error(t, logRecordsCleanup(), false)
+
+}
+
+func TestKeyValues_GoroutineSafe(t *testing.T) {
+	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+
+	testo.Nil(t, kv, false)
+	testo.Error(t, err, false)
+
+	pfxs := []string{"a", "b", "c", "d", "e"}
+	vals := 10
+
+	// first: concurrently set values in groups
+	// in the end keyValues should contain all values
+
+	var wg sync.WaitGroup
+	for _, pfx := range pfxs {
+		wg.Add(1)
+		go func(kv KeyValues, p string) {
+			defer wg.Done()
+			for ii := 0; ii < vals; ii++ {
+				aa := strconv.FormatInt(int64(ii), 10)
+				err := kv.Set(p+aa, strings.NewReader(aa))
+				testo.Error(t, err, false)
+			}
+		}(kv, pfx)
+	}
+	wg.Wait()
+
+	testo.EqualValues(t, kv.Len(), len(pfxs)*vals)
+
+	for _, pfx := range pfxs {
+		wg.Add(1)
+		go func(kv KeyValues, p string) {
+			defer wg.Done()
+			for ii := 0; ii < vals; ii++ {
+				aa := strconv.FormatInt(int64(ii), 10)
+				ok, err := kv.Cut(p + aa)
+				testo.EqualValues(t, ok, true)
+				testo.Error(t, err, false)
+			}
+		}(kv, pfx)
+	}
+	wg.Wait()
+
+	testo.EqualValues(t, kv.Len(), 0)
 
 	testo.Error(t, logRecordsCleanup(), false)
 }
