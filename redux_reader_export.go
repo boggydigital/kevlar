@@ -1,4 +1,4 @@
-package kevlar_legacy
+package kevlar
 
 import (
 	"github.com/boggydigital/wits"

@@ -1,9 +1,16 @@
-package kevlar_legacy
+package kevlar
 
 import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"strings"
+)
+
+type MatchOption int
+
+const (
+	CaseSensitive = iota
+	FullMatch
 )
 
 func (rdx *redux) MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string {

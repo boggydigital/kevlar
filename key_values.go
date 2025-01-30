@@ -20,7 +20,31 @@ const (
 	newExt             = ".new"
 )
 
+const (
+	JsonExt = ".json"
+	GobExt  = ".gob"
+	HtmlExt = ".html"
+	XmlExt  = ".xml"
+)
+
 const UnknownModTime = -1
+
+type mutationType int
+
+const (
+	create mutationType = iota
+	update
+	cut
+)
+
+type logRecord struct {
+	Id   string
+	Ts   int64
+	Mt   mutationType
+	Hash []byte
+}
+
+type logRecords []*logRecord
 
 type keyValues struct {
 	dir string
@@ -66,6 +90,12 @@ func createWriteOnlyFile(path string) (*os.File, error) {
 	// - existing log is in good condition and is only missing that last attempted operation
 	// - it's unclear what state existing file is, so it's not worth trying to salvage it
 	// - instead we're just ignoring it to avoid blocking (hopefully) good operations
+	dir, _ := filepath.Split(path)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, err
+		}
+	}
 	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 }
 

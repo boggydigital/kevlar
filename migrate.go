@@ -14,7 +14,7 @@ import (
 func Migrate(dir string, ext string) error {
 
 	// load legacy log
-	absLegacyLogFilename := filepath.Join(dir, kevlar_legacy.KevlarDirname, kevlar_legacy.LogRecordsFilename)
+	absLegacyLogFilename := filepath.Join(dir, kevlar_legacy.KevlarDirname, logRecordsFilename)
 	if _, err := os.Stat(absLegacyLogFilename); os.IsNotExist(err) {
 		return nil
 	} else if err != nil {

@@ -1,4 +1,4 @@
-package kevlar_legacy
+package kevlar
 
 import (
 	"github.com/boggydigital/testo"
@@ -15,7 +15,7 @@ func TestReduxWriteConnect(t *testing.T) {
 
 		testo.Error(t, wrdx.write(asset), false)
 
-		rdx, err := NewReduxReader(filepath.Join(os.TempDir(), testsDirname), asset)
+		rdx, err := NewReduxReader(filepath.Join(os.TempDir(), testDir), asset)
 		testo.Error(t, err, false)
 		testo.Nil(t, rdx, false)
 		testo.Error(t, rdx.MustHave(asset), false)

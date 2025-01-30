@@ -1,4 +1,4 @@
-package kevlar_legacy
+package kevlar
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 func reduxCleanup(assets ...string) error {
 	for _, asset := range assets {
-		rdxPath := filepath.Join(os.TempDir(), testsDirname, asset+GobExt)
+		rdxPath := filepath.Join(os.TempDir(), testDir, asset+GobExt)
 		if _, err := os.Stat(rdxPath); err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -24,7 +24,7 @@ func reduxCleanup(assets ...string) error {
 
 func mockRedux() *redux {
 	return &redux{
-		dir: filepath.Join(os.TempDir(), testsDirname),
+		dir: filepath.Join(os.TempDir(), testDir),
 		akv: map[string]map[string][]string{
 			"a1": {
 				"k1": {"v11"},

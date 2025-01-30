@@ -1,4 +1,4 @@
-package kevlar_legacy
+package kevlar
 
 import (
 	"io"
@@ -12,7 +12,7 @@ type ReadableRedux interface {
 	HasValue(asset, key, val string) bool
 	GetAllValues(asset, key string) ([]string, bool)
 	GetLastVal(asset, key string) (string, bool)
-	ModTime() (int64, error)
+	ModTime() int64
 	RefreshReader() (ReadableRedux, error)
 	MatchAsset(asset string, terms []string, scope []string, options ...MatchOption) []string
 	Match(query map[string][]string, options ...MatchOption) []string
