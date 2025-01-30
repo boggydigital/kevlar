@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-func Migrate(dir string, ext string) error {
+func Migrate(dir string) error {
 
 	// load legacy log
 	absLegacyLogFilename := filepath.Join(dir, kevlar_legacy.KevlarDirname, logRecordsFilename)
@@ -64,7 +64,6 @@ func Migrate(dir string, ext string) error {
 
 	kv := &keyValues{
 		dir: dir,
-		ext: ext,
 		log: newLogRecords,
 		mtx: new(sync.Mutex),
 	}
