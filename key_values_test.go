@@ -246,8 +246,8 @@ func TestLocalKeyValues_IsUpdatedAfter(t *testing.T) {
 	}
 }
 
-func TestLocalKeyValues_ValueModTime(t *testing.T) {
-	start := time.Now().Unix()
+func TestLocalKeyValues_LogModTime(t *testing.T) {
+	start := timeNow()
 	time.Sleep(100 * time.Millisecond)
 
 	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
@@ -256,16 +256,16 @@ func TestLocalKeyValues_ValueModTime(t *testing.T) {
 
 	testo.Error(t, kv.Set("test", strings.NewReader("test")), false)
 
-	cmt := kv.ValueModTime("1")
+	cmt := kv.LogModTime("1")
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, cmt, start, testo.Less)
 
-	cmt = kv.ValueModTime("test")
+	cmt = kv.LogModTime("test")
 	testo.Error(t, err, false)
 
 	testo.CompareInt64(t, cmt, start, testo.GreaterOrEqual)
 
-	cmt = kv.ValueModTime("2")
+	cmt = kv.LogModTime("2")
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, cmt, start, testo.Less)
 

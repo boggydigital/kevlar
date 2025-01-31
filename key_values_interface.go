@@ -19,6 +19,6 @@ type KeyValues interface {
 	CreatedOrUpdatedAfter(ts int64) iter.Seq[string]
 	IsUpdatedAfter(key string, ts int64) bool
 
-	ModTime() int64
-	ValueModTime(key string) int64
+	LogModTime(key string) int64
+	FileModTime(key string) (int64, error)
 }

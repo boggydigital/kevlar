@@ -32,7 +32,7 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 		if assetKeyValues[asset], err = loadAsset(kv, asset); err != nil {
 			return nil, err
 		}
-		amts[asset] = kv.ValueModTime(asset)
+		amts[asset] = kv.LogModTime(asset)
 	}
 
 	return &redux{

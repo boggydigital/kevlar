@@ -396,11 +396,21 @@ func (kv *keyValues) ModTime() int64 {
 	return UnknownModTime
 }
 
-func (kv *keyValues) ValueModTime(key string) int64 {
+func (kv *keyValues) LogModTime(key string) int64 {
 	for ii := len(kv.log) - 1; ii >= 0; ii-- {
 		if lr := kv.log[ii]; lr.Id == key {
 			return lr.Ts
 		}
 	}
 	return UnknownModTime
+}
+
+func (kv *keyValues) FileModTime(key string) (int64, error) {
+	if stat, err := os.Stat(kv.absValueFilename(key)); err == nil {
+		return stat.ModTime().UTC().Unix(), nil
+	} else if os.IsNotExist(err) {
+		return UnknownModTime, nil
+	} else {
+		return UnknownModTime, err
+	}
 }
