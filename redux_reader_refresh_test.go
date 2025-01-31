@@ -70,7 +70,6 @@ func TestRedux_RefreshReader(t *testing.T) {
 
 	mt, err := rdx.FileModTime()
 	testo.Error(t, err, false)
-	// FileModTime should be -1 (UnknownModTime) here, because we're removed the backing file
 	testo.CompareInt64(t, mt, -1, testo.Greater)
 
 	// second time: don't change modTime and try to RefreshReader again
