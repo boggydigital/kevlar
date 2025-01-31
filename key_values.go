@@ -289,7 +289,7 @@ func (kv *keyValues) Keys() iter.Seq[string] {
 
 func (kv *keyValues) Has(key string) bool {
 	for _, lr := range kv.log {
-		if lr.Id == key {
+		if lr.Id == key && lr.Mt != cut {
 			return true
 		}
 	}

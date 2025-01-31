@@ -47,8 +47,7 @@ func newRedux(dir string, assets ...string) (*redux, error) {
 
 func loadAsset(kv KeyValues, asset string) (map[string][]string, error) {
 
-	ok := kv.Has(asset)
-	if !ok {
+	if !kv.Has(asset) {
 		return make(map[string][]string), nil
 	}
 
@@ -56,22 +55,20 @@ func loadAsset(kv KeyValues, asset string) (map[string][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if arc != nil {
-		defer arc.Close()
-	}
+	defer arc.Close()
 
-	var keyValues map[string][]string
+	var nkv map[string][]string
 	if arc != nil {
-		if err := gob.NewDecoder(arc).Decode(&keyValues); err == io.EOF {
+		if err := gob.NewDecoder(arc).Decode(&nkv); err == io.EOF {
 			// empty reduction - do nothing, it'll be initialized below
 		} else if err != nil {
 			return nil, err
 		}
 	}
 
-	if keyValues == nil {
-		keyValues = make(map[string][]string)
+	if nkv == nil {
+		nkv = make(map[string][]string)
 	}
 
-	return keyValues, nil
+	return nkv, nil
 }
