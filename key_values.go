@@ -15,36 +15,7 @@ import (
 	"time"
 )
 
-const (
-	logRecordsFilename = "_log.gob"
-	newExt             = ".new"
-)
-
-const (
-	JsonExt = ".json"
-	GobExt  = ".gob"
-	HtmlExt = ".html"
-	XmlExt  = ".xml"
-)
-
 const UnknownModTime = -1
-
-type mutationType int
-
-const (
-	create mutationType = iota
-	update
-	cut
-)
-
-type logRecord struct {
-	Id   string
-	Ts   int64
-	Mt   mutationType
-	Hash []byte
-}
-
-type logRecords []*logRecord
 
 type keyValues struct {
 	dir string
@@ -53,9 +24,9 @@ type keyValues struct {
 	mtx *sync.Mutex
 }
 
-// NewKeyValues connects a new local key value storage at the specified directory
+// New connects a new local key value storage at the specified directory
 // and will use specified extension for the value files
-func NewKeyValues(dir, ext string) (KeyValues, error) {
+func New(dir, ext string) (KeyValues, error) {
 
 	// make sure dir we're connecting to exists
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -160,25 +131,25 @@ func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
 	return os.Rename(newPath, path)
 }
 
-// createLogRecord appends a new create log record
+// createLogRecord appends a new Create log record
 func (kv *keyValues) createLogRecord(key string, hash []byte) error {
 	rec := &logRecord{
 		Id:   key,
 		Ts:   timeNow(),
-		Mt:   create,
+		Mt:   Create,
 		Hash: hash,
 	}
 
 	return kv.writeLogRecord(rec)
 }
 
-// updateLogRecord removes all existing log records of type update and
-// appends a new update log record
+// updateLogRecord removes all existing log records of type Update and
+// appends a new Update log record
 func (kv *keyValues) updateLogRecord(key string, hash []byte) error {
 	kv.mtx.Lock()
 	compactedLogRecords := make(logRecords, 0, len(kv.log))
 	for _, lr := range kv.log {
-		if lr.Id == key && lr.Mt == update {
+		if lr.Id == key && lr.Mt == Update {
 			continue
 		}
 		compactedLogRecords = append(compactedLogRecords, lr)
@@ -190,7 +161,7 @@ func (kv *keyValues) updateLogRecord(key string, hash []byte) error {
 	updLr := &logRecord{
 		Id:   key,
 		Ts:   timeNow(),
-		Mt:   update,
+		Mt:   Update,
 		Hash: hash,
 	}
 
@@ -198,7 +169,7 @@ func (kv *keyValues) updateLogRecord(key string, hash []byte) error {
 }
 
 // cutLogRecord removes all existing log records (any type) for this key and
-// appends a new cut log record
+// appends a new Cut log record
 func (kv *keyValues) cutLogRecord(key string) error {
 	kv.mtx.Lock()
 	compactedLogRecords := make(logRecords, 0, len(kv.log))
@@ -215,7 +186,7 @@ func (kv *keyValues) cutLogRecord(key string) error {
 	rec := &logRecord{
 		Id: key,
 		Ts: timeNow(),
-		Mt: cut,
+		Mt: Cut,
 	}
 
 	return kv.writeLogRecord(rec)
@@ -244,7 +215,7 @@ func (kv *keyValues) writeLogRecord(rec *logRecord) error {
 func (kv *keyValues) currentHash(key string) []byte {
 	for ii := len(kv.log) - 1; ii >= 0; ii-- {
 		if lr := kv.log[ii]; lr.Id == key {
-			// that should work even if the log record is cut type
+			// that should work even if the log record is Cut type
 			return lr.Hash
 		}
 	}
@@ -256,7 +227,7 @@ func (kv *keyValues) keys() map[string]any {
 	keys := make(map[string]any)
 
 	for _, lr := range kv.log {
-		if lr.Mt == cut {
+		if lr.Mt == Cut {
 			delete(keys, lr.Id)
 			continue
 		}
@@ -264,19 +235,6 @@ func (kv *keyValues) keys() map[string]any {
 	}
 
 	return keys
-}
-
-func (kv *keyValues) filterLog(m func(*logRecord) bool) iter.Seq[string] {
-	matches := make(map[string]any)
-	for _, lr := range kv.log {
-		if m(lr) {
-			matches[lr.Id] = nil
-		}
-		if lr.Mt == cut {
-			delete(matches, lr.Id)
-		}
-	}
-	return maps.Keys(matches)
 }
 
 func (kv *keyValues) Len() int {
@@ -289,7 +247,7 @@ func (kv *keyValues) Keys() iter.Seq[string] {
 
 func (kv *keyValues) Has(key string) bool {
 	for _, lr := range kv.log {
-		if lr.Id == key && lr.Mt != cut {
+		if lr.Id == key && lr.Mt != Cut {
 			return true
 		}
 	}
@@ -334,66 +292,31 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 }
 
 // Cut removes the value from storage in the following sequence of events:
-// - cut operation log value is added
+// - Cut operation log value is added
 // - stored value is removed
-func (kv *keyValues) Cut(key string) (bool, error) {
+func (kv *keyValues) Cut(key string) error {
 	if !kv.Has(key) {
-		return false, nil
+		return nil
 	}
 
 	absValueFilename := kv.absValueFilename(key)
 	if _, err := os.Stat(absValueFilename); err == nil {
 		if err := os.Remove(absValueFilename); err != nil {
-			return false, err
+			return err
 		}
 	}
 
-	if err := kv.cutLogRecord(key); err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return kv.cutLogRecord(key)
 }
 
-func (kv *keyValues) CreatedAfter(ts int64) iter.Seq[string] {
-	return kv.filterLog(func(r *logRecord) bool {
-		return r.Mt == create && r.Ts >= ts
-	})
-}
-
-func (kv *keyValues) UpdatedAfter(ts int64) iter.Seq[string] {
-	return kv.filterLog(func(r *logRecord) bool {
-		return r.Mt == update && r.Ts >= ts
-	})
-}
-
-func (kv *keyValues) CreatedOrUpdatedAfter(ts int64) iter.Seq[string] {
-	return kv.filterLog(func(r *logRecord) bool {
-		createdAfter := r.Mt == create && r.Ts >= ts
-		updatedAfter := r.Mt == update && r.Ts >= ts
-		return createdAfter || updatedAfter
-	})
-}
-
-func (kv *keyValues) IsUpdatedAfter(key string, ts int64) bool {
-	for ii := len(kv.log) - 1; ii >= 0; ii-- {
-		if lr := kv.log[ii]; lr.Id == key {
-			switch lr.Mt {
-			case update:
-				return lr.Ts >= ts
-			default:
-				return false
-			}
+func (kv *keyValues) Since(ts int64, mts ...MutationType) iter.Seq2[string, MutationType] {
+	results := make(map[string]MutationType)
+	for _, lr := range kv.log {
+		if lr.Ts >= ts && slices.Contains(mts, lr.Mt) {
+			results[lr.Id] = lr.Mt
 		}
 	}
-	return false
-}
-
-func (kv *keyValues) ModTime() int64 {
-	if len(kv.log) > 0 {
-		return kv.log[len(kv.log)-1].Ts
-	}
-	return UnknownModTime
+	return maps.All(results)
 }
 
 func (kv *keyValues) LogModTime(key string) int64 {

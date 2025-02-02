@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,27 +24,27 @@ func mockKeyValues() *keyValues {
 		log: []*logRecord{
 			{
 				Ts: 1,
-				Mt: create,
+				Mt: Create,
 				Id: "1",
 			},
 			{
 				Ts: 2,
-				Mt: create,
+				Mt: Create,
 				Id: "2",
 			},
 			{
 				Ts: 3,
-				Mt: update,
+				Mt: Update,
 				Id: "2",
 			},
 			{
 				Ts: 4,
-				Mt: create,
+				Mt: Create,
 				Id: "3",
 			},
 			{
 				Ts: 5,
-				Mt: cut,
+				Mt: Cut,
 				Id: "1",
 			},
 		},
@@ -67,13 +66,13 @@ func logRecordsCleanup() error {
 	return os.RemoveAll(filepath.Join(os.TempDir(), testDir))
 }
 
-func TestNewKeyValues(t *testing.T) {
-	lkv, err := NewKeyValues(os.TempDir(), JsonExt)
+func TestNew(t *testing.T) {
+	lkv, err := New(os.TempDir(), JsonExt)
 	testo.Nil(t, lkv, false)
 	testo.Error(t, err, false)
 }
 
-func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
+func TestKeyValues_SetHasGetCut(t *testing.T) {
 	tests := []struct {
 		set []string
 		get map[string]bool
@@ -85,7 +84,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+			kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
 			testo.Nil(t, kv, false)
 			testo.Error(t, err, false)
 
@@ -120,9 +119,7 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 
 			// Cut, Has tests
 			for _, ck := range tt.set {
-				has := kv.Has(ck)
-				ok, err := kv.Cut(ck)
-				testo.EqualValues(t, ok, has)
+				err := kv.Cut(ck)
 				testo.Error(t, err, false)
 			}
 
@@ -132,125 +129,76 @@ func TestLocalKeyValuesSetHasGetCut(t *testing.T) {
 	}
 }
 
-func TestLocalKeyValues_CreatedAfter(t *testing.T) {
-
+func TestKeyValues_Since(t *testing.T) {
 	tests := []struct {
-		after int64
-		exp   []string
+		since int64
+		mts   []MutationType
+		exp   map[string]MutationType
 	}{
-		{-1, []string{"2", "3"}},
-		{0, []string{"2", "3"}},
-		{1, []string{"2", "3"}},
-		{2, []string{"2", "3"}},
-		{3, []string{"3"}},
-		{4, []string{"3"}},
-		{5, []string{}},
+		{-1, []MutationType{}, map[string]MutationType{}},
+		{-1, []MutationType{Create}, map[string]MutationType{"1": Create, "2": Create, "3": Create}},
+		{-1, []MutationType{Create, Update}, map[string]MutationType{"1": Create, "2": Update, "3": Create}},
+		{-1, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut, "2": Update, "3": Create}},
+
+		{0, []MutationType{}, map[string]MutationType{}},
+		{0, []MutationType{Create}, map[string]MutationType{"1": Create, "2": Create, "3": Create}},
+		{0, []MutationType{Create, Update}, map[string]MutationType{"1": Create, "2": Update, "3": Create}},
+		{0, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut, "2": Update, "3": Create}},
+
+		{1, []MutationType{}, map[string]MutationType{}},
+		{1, []MutationType{Create}, map[string]MutationType{"1": Create, "2": Create, "3": Create}},
+		{1, []MutationType{Create, Update}, map[string]MutationType{"1": Create, "2": Update, "3": Create}},
+		{1, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut, "2": Update, "3": Create}},
+
+		{2, []MutationType{}, map[string]MutationType{}},
+		{2, []MutationType{Create}, map[string]MutationType{"2": Create, "3": Create}},
+		{2, []MutationType{Create, Update}, map[string]MutationType{"2": Update, "3": Create}},
+		{2, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut, "2": Update, "3": Create}},
+
+		{3, []MutationType{}, map[string]MutationType{}},
+		{3, []MutationType{Create}, map[string]MutationType{"3": Create}},
+		{3, []MutationType{Create, Update}, map[string]MutationType{"2": Update, "3": Create}},
+		{3, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut, "2": Update, "3": Create}},
+
+		{4, []MutationType{}, map[string]MutationType{}},
+		{4, []MutationType{Create}, map[string]MutationType{"3": Create}},
+		{4, []MutationType{Create, Update}, map[string]MutationType{"3": Create}},
+		{4, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut, "3": Create}},
+
+		{5, []MutationType{}, map[string]MutationType{}},
+		{5, []MutationType{Create}, map[string]MutationType{}},
+		{5, []MutationType{Create, Update}, map[string]MutationType{}},
+		{5, []MutationType{Create, Update, Cut}, map[string]MutationType{"1": Cut}},
+
+		{6, []MutationType{}, map[string]MutationType{}},
+		{6, []MutationType{Create}, map[string]MutationType{}},
+		{6, []MutationType{Create, Update}, map[string]MutationType{}},
+		{6, []MutationType{Create, Update, Cut}, map[string]MutationType{}},
 	}
 
 	kv := mockKeyValues()
+
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ca := kv.CreatedAfter(tt.after)
-			caLen := 0
-			for cav := range ca {
-				caLen++
-				testo.EqualValues(t, slices.Contains(tt.exp, cav), true)
+
+			res := kv.Since(tt.since, tt.mts...)
+			testo.Nil(t, res, false)
+
+			for id, mt := range res {
+				emt, ok := tt.exp[id]
+				testo.EqualValues(t, ok, true)
+				testo.EqualValues(t, emt, mt)
 			}
-			testo.EqualValues(t, caLen, len(tt.exp))
+
 		})
 	}
 }
 
-func TestLocalKeyValues_UpdatedAfter(t *testing.T) {
-
-	tests := []struct {
-		after int64
-		exp   []string
-	}{
-		{-1, []string{"2"}},
-		{0, []string{"2"}},
-		{1, []string{"2"}},
-		{2, []string{"2"}},
-		{3, []string{"2"}},
-		{4, []string{}},
-	}
-
-	kv := mockKeyValues()
-	for ii, tt := range tests {
-		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ua := kv.UpdatedAfter(tt.after)
-			uaLen := 0
-			for uav := range ua {
-				uaLen++
-				testo.EqualValues(t, slices.Contains(tt.exp, uav), true)
-			}
-			testo.EqualValues(t, uaLen, len(tt.exp))
-		})
-	}
-}
-
-func TestLocalKeyValues_CreatedOrUpdatedAfter(t *testing.T) {
-
-	tests := []struct {
-		after int64
-		exp   []string
-	}{
-		{-1, []string{"2", "3"}},
-		{0, []string{"2", "3"}},
-		{1, []string{"2", "3"}},
-		{2, []string{"2", "3"}},
-		{3, []string{"2", "3"}},
-		{4, []string{"3"}},
-		{5, []string{}},
-	}
-
-	kv := mockKeyValues()
-	for ii, tt := range tests {
-		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			cua := kv.CreatedOrUpdatedAfter(tt.after)
-			cuaLen := 0
-			for cuav := range cua {
-				cuaLen++
-				testo.EqualValues(t, slices.Contains(tt.exp, cuav), true)
-			}
-			testo.EqualValues(t, cuaLen, len(tt.exp))
-		})
-	}
-}
-
-func TestLocalKeyValues_IsUpdatedAfter(t *testing.T) {
-
-	tests := []struct {
-		key   string
-		after int64
-		exp   bool
-	}{
-		{"1", -1, false},
-		{"1", 0, false},
-		{"1", 1, false},
-		{"1", 2, false},
-		{"2", 0, true},
-		{"2", 1, true},
-		{"2", 2, true},
-		{"2", 3, true},
-		{"2", 4, false},
-		{"3", -1, false},
-	}
-
-	kv := mockKeyValues()
-	for ii, tt := range tests {
-		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			ok := kv.IsUpdatedAfter(tt.key, tt.after)
-			testo.EqualValues(t, ok, tt.exp)
-		})
-	}
-}
-
-func TestLocalKeyValues_LogModTime(t *testing.T) {
+func TestKeyValues_LogModTime(t *testing.T) {
 	start := timeNow()
 	time.Sleep(100 * time.Millisecond)
 
-	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
 
@@ -269,15 +217,41 @@ func TestLocalKeyValues_LogModTime(t *testing.T) {
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, cmt, start, testo.Less)
 
-	ok, err := kv.Cut("test")
-	testo.EqualValues(t, ok, true)
+	err = kv.Cut("test")
 	testo.Error(t, err, false)
 
 	testo.Error(t, logRecordsCleanup(), false)
 }
 
-func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
-	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+func TestKeyValues_Len(t *testing.T) {
+	kv := mockKeyValues()
+	testo.Nil(t, kv, false)
+	testo.EqualValues(t, kv.Len(), 2) // create 1; create 2; update 2; create 3; cut 1 = [2,3]
+}
+
+func TestKeyValues_FileModTime(t *testing.T) {
+	start := timeNow()
+	kv := mockKeyValues()
+	testo.Error(t, kv.writeLogRecord(nil), false)
+
+	testo.Error(t, kv.Set("1", strings.NewReader("one")), false)
+
+	mt, err := kv.FileModTime("1")
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, mt, start, testo.GreaterOrEqual)
+
+	testo.Error(t, kv.Cut("1"), false)
+
+	mt, err = kv.FileModTime("1")
+	testo.Error(t, err, false)
+	testo.CompareInt64(t, mt, start, testo.Less)
+	testo.CompareInt64(t, mt, UnknownModTime, testo.Equal)
+
+	testo.Error(t, logRecordsCleanup(), false)
+}
+
+func TestKeyValues_UpdateCompactsLog(t *testing.T) {
+	ikv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -287,19 +261,18 @@ func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 	testo.EqualValues(t, len(kv.log), 0)
 
 	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
-	testo.EqualValues(t, len(kv.log), 1) // added create record
+	testo.EqualValues(t, len(kv.log), 1) // added Create record
 
 	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
 	testo.EqualValues(t, len(kv.log), 1) // no writes happened, same content, no new log records
 
 	testo.Error(t, kv.Set("1", strings.NewReader("2")), false)
-	testo.EqualValues(t, len(kv.log), 2) // added update record
+	testo.EqualValues(t, len(kv.log), 2) // added Update record
 
 	testo.Error(t, kv.Set("1", strings.NewReader("3")), false)
-	testo.EqualValues(t, len(kv.log), 2) // existing update record updated, no new log records
+	testo.EqualValues(t, len(kv.log), 2) // existing Update record updated, no new log records
 
-	ok, err = kv.Cut("1")
-	testo.EqualValues(t, ok, true)
+	err = kv.Cut("1")
 	testo.Error(t, err, false)
 
 	testo.Error(t, logRecordsCleanup(), false)
@@ -307,7 +280,7 @@ func TestKeyValues_UpdatesPreventLogGrowth(t *testing.T) {
 
 func TestKeyValues_CutCompactsLog(t *testing.T) {
 
-	ikv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+	ikv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -317,20 +290,19 @@ func TestKeyValues_CutCompactsLog(t *testing.T) {
 	testo.EqualValues(t, len(kv.log), 0)
 
 	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
-	testo.EqualValues(t, len(kv.log), 1) // added create record
+	testo.EqualValues(t, len(kv.log), 1) // added Create record
 
 	testo.Error(t, kv.Set("1", strings.NewReader("1")), false)
 	testo.EqualValues(t, len(kv.log), 1) // no writes happened, same content, no new log records
 
 	testo.Error(t, kv.Set("1", strings.NewReader("2")), false)
-	testo.EqualValues(t, len(kv.log), 2) // added update record
+	testo.EqualValues(t, len(kv.log), 2) // added Update record
 
 	testo.Error(t, kv.Set("1", strings.NewReader("3")), false)
-	testo.EqualValues(t, len(kv.log), 2) // existing update record updated, no new log records
+	testo.EqualValues(t, len(kv.log), 2) // existing Update record updated, no new log records
 
-	ok, err = kv.Cut("1")
-	testo.EqualValues(t, len(kv.log), 1) // log has been compacted to only store cut operation
-	testo.EqualValues(t, ok, true)
+	err = kv.Cut("1")
+	testo.EqualValues(t, len(kv.log), 1) // log has been compacted to only store Cut operation
 	testo.Error(t, err, false)
 
 	testo.Error(t, logRecordsCleanup(), false)
@@ -338,7 +310,7 @@ func TestKeyValues_CutCompactsLog(t *testing.T) {
 }
 
 func TestKeyValues_GoroutineSafe(t *testing.T) {
-	kv, err := NewKeyValues(filepath.Join(os.TempDir(), testDir), GobExt)
+	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
 
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
@@ -371,8 +343,7 @@ func TestKeyValues_GoroutineSafe(t *testing.T) {
 			defer wg.Done()
 			for ii := 0; ii < vals; ii++ {
 				aa := strconv.FormatInt(int64(ii), 10)
-				ok, err := kv.Cut(p + aa)
-				testo.EqualValues(t, ok, true)
+				err := kv.Cut(p + aa)
 				testo.Error(t, err, false)
 			}
 		}(kv, pfx)

@@ -131,14 +131,14 @@ func hashFile(id, dir, ext string) ([]byte, error) {
 	return sha256Bytes(file)
 }
 
-func mapMutationType(mt kevlar_legacy.MutationType) mutationType {
+func mapMutationType(mt kevlar_legacy.MutationType) MutationType {
 	switch mt {
 	case kevlar_legacy.Create:
-		return create
+		return Create
 	case kevlar_legacy.Update:
-		return update
+		return Update
 	case kevlar_legacy.Cut:
-		return cut
+		return Cut
 	}
-	return create
+	return Create
 }
