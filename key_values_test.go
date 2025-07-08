@@ -354,3 +354,18 @@ func TestKeyValues_GoroutineSafe(t *testing.T) {
 
 	testo.Error(t, logRecordsCleanup(), false)
 }
+
+func TestKeyValues_SetNil(t *testing.T) {
+
+	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+
+	testo.Nil(t, kv, false)
+	testo.Error(t, err, false)
+
+	err = kv.Set("1", new(bytes.Buffer))
+	testo.Error(t, err, false)
+
+	testo.EqualValues(t, kv.Len(), 1)
+
+	testo.Error(t, logRecordsCleanup(), false)
+}

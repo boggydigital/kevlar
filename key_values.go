@@ -30,7 +30,7 @@ func New(dir, ext string) (KeyValues, error) {
 
 	// make sure dir we're connecting to exists
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err = os.MkdirAll(dir, 0755); err != nil {
 			return nil, err
 		}
 	}
@@ -63,7 +63,7 @@ func createWriteOnlyFile(path string) (*os.File, error) {
 	// - instead we're just ignoring it to avoid blocking (hopefully) good operations
 	dir, _ := filepath.Split(path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err = os.MkdirAll(dir, 0755); err != nil {
 			return nil, err
 		}
 	}
@@ -92,12 +92,12 @@ func (kv *keyValues) loadLogRecords() error {
 	defer logFile.Close()
 
 	kv.mtx.Lock()
-	if err := gob.NewDecoder(logFile).Decode(&kv.log); err == io.EOF {
+	defer kv.mtx.Unlock()
+	if err = gob.NewDecoder(logFile).Decode(&kv.log); err == io.EOF {
 		// do nothing - empty log will be initialized later
 	} else if err != nil {
 		return err
 	}
-	kv.mtx.Unlock()
 
 	return nil
 }
@@ -120,12 +120,16 @@ func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
 	}
 	defer newFile.Close()
 
-	if _, err := io.Copy(newFile, r); err != nil {
+	if _, err = io.Copy(newFile, r); err != nil {
 		return err
 	}
 
-	if err := newFile.Sync(); err != nil {
+	if err = newFile.Sync(); err != nil {
 		return err
+	}
+
+	if _, err = os.Stat(newPath); os.IsNotExist(err) {
+		return nil
 	}
 
 	return os.Rename(newPath, path)
@@ -195,19 +199,19 @@ func (kv *keyValues) cutLogRecord(key string) error {
 func (kv *keyValues) writeLogRecord(rec *logRecord) error {
 
 	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
 	if rec != nil {
 		kv.log = append(kv.log, rec)
 	}
 
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(kv.log); err != nil {
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(kv.log); err != nil {
 		return err
 	}
 
-	if err := kv.writeAtomically(kv.absLogRecordsFilename(), &buf); err != nil {
+	if err := kv.writeAtomically(kv.absLogRecordsFilename(), buf); err != nil {
 		return err
 	}
-	kv.mtx.Unlock()
 
 	return nil
 }
@@ -263,8 +267,8 @@ func (kv *keyValues) Get(key string) (io.ReadCloser, error) {
 // is stored in log
 func (kv *keyValues) Set(key string, reader io.Reader) error {
 
-	var buf bytes.Buffer
-	tr := io.TeeReader(reader, &buf)
+	buf := new(bytes.Buffer)
+	tr := io.TeeReader(reader, buf)
 
 	// check if value already exists and has the same hash
 	hash, err := sha256Bytes(tr)
@@ -279,7 +283,8 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 	}
 
 	kv.mtx.Lock()
-	if err := kv.writeAtomically(kv.absValueFilename(key), &buf); err != nil {
+	if err = kv.writeAtomically(kv.absValueFilename(key), buf); err != nil {
+		kv.mtx.Unlock()
 		return err
 	}
 	kv.mtx.Unlock()
@@ -301,7 +306,7 @@ func (kv *keyValues) Cut(key string) error {
 
 	absValueFilename := kv.absValueFilename(key)
 	if _, err := os.Stat(absValueFilename); err == nil {
-		if err := os.Remove(absValueFilename); err != nil {
+		if err = os.Remove(absValueFilename); err != nil {
 			return err
 		}
 	}
