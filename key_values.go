@@ -67,8 +67,7 @@ func createWriteOnlyFile(path string) (*os.File, error) {
 			return nil, err
 		}
 	}
-	//return os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-	return os.Create(path)
+	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 }
 
 func sha256Bytes(reader io.Reader) ([]byte, error) {
@@ -86,14 +85,15 @@ func (kv *keyValues) loadLogRecords() error {
 		return err
 	}
 
+	kv.mtx.Lock()
+	defer kv.mtx.Unlock()
+
 	logFile, err := os.Open(absLogFilename)
 	if err != nil {
 		return err
 	}
 	defer logFile.Close()
 
-	kv.mtx.Lock()
-	defer kv.mtx.Unlock()
 	if err = gob.NewDecoder(logFile).Decode(&kv.log); err == io.EOF {
 		// do nothing - empty log will be initialized later
 	} else if err != nil {
@@ -267,7 +267,6 @@ func (kv *keyValues) Get(key string) (io.ReadCloser, error) {
 // last time it was written. This is validated with a SHA-256 hash that
 // is stored in log
 func (kv *keyValues) Set(key string, reader io.Reader) error {
-
 	buf := new(bytes.Buffer)
 	tr := io.TeeReader(reader, buf)
 

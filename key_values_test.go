@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 )
 
 const (
@@ -196,7 +195,6 @@ func TestKeyValues_Since(t *testing.T) {
 
 func TestKeyValues_LogModTime(t *testing.T) {
 	start := timeNow()
-	time.Sleep(100 * time.Millisecond)
 
 	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
 	testo.Nil(t, kv, false)
