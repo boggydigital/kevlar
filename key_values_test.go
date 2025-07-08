@@ -103,7 +103,7 @@ func TestKeyValues_SetHasGetCut(t *testing.T) {
 
 			// Cut, Has tests
 			for _, ck := range tt.set {
-				err := kv.Cut(ck)
+				err = kv.Cut(ck)
 				testo.Error(t, err, false)
 			}
 

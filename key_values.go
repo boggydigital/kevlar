@@ -119,13 +119,18 @@ func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer newFile.Close()
 
 	if _, err = io.Copy(newFile, r); err != nil {
+		newFile.Close()
 		return err
 	}
 
 	if err = newFile.Sync(); err != nil {
+		newFile.Close()
+		return err
+	}
+
+	if err = newFile.Close(); err != nil {
 		return err
 	}
 
