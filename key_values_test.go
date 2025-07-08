@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/boggydigital/testo"
 	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -16,9 +15,9 @@ const (
 	testDir = "kevlar_test"
 )
 
-func mockKeyValues() *keyValues {
+func mockKeyValues(t *testing.T) *keyValues {
 	return &keyValues{
-		dir: filepath.Join(os.TempDir(), testDir),
+		dir: filepath.Join(t.TempDir(), testDir),
 		ext: GobExt,
 		log: []*logRecord{
 			{
@@ -51,22 +50,8 @@ func mockKeyValues() *keyValues {
 	}
 }
 
-func logRecordsCleanup() error {
-	logPath := filepath.Join(os.TempDir(), testDir, logRecordsFilename)
-	if _, err := os.Stat(logPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	if err := os.Remove(logPath); err != nil {
-		return err
-	}
-	return os.RemoveAll(filepath.Join(os.TempDir(), testDir))
-}
-
 func TestNew(t *testing.T) {
-	lkv, err := New(os.TempDir(), JsonExt)
+	lkv, err := New(t.TempDir(), JsonExt)
 	testo.Nil(t, lkv, false)
 	testo.Error(t, err, false)
 }
@@ -83,7 +68,7 @@ func TestKeyValues_SetHasGetCut(t *testing.T) {
 
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
-			kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+			kv, err := New(filepath.Join(t.TempDir(), testDir), GobExt)
 			testo.Nil(t, kv, false)
 			testo.Error(t, err, false)
 
@@ -121,8 +106,6 @@ func TestKeyValues_SetHasGetCut(t *testing.T) {
 				err := kv.Cut(ck)
 				testo.Error(t, err, false)
 			}
-
-			testo.Error(t, logRecordsCleanup(), false)
 
 		})
 	}
@@ -175,7 +158,7 @@ func TestKeyValues_Since(t *testing.T) {
 		{6, []MutationType{Create, Update, Cut}, map[string]MutationType{}},
 	}
 
-	kv := mockKeyValues()
+	kv := mockKeyValues(t)
 
 	for ii, tt := range tests {
 		t.Run(strconv.Itoa(ii), func(t *testing.T) {
@@ -188,7 +171,6 @@ func TestKeyValues_Since(t *testing.T) {
 				testo.EqualValues(t, ok, true)
 				testo.EqualValues(t, emt, mt)
 			}
-
 		})
 	}
 }
@@ -196,7 +178,7 @@ func TestKeyValues_Since(t *testing.T) {
 func TestKeyValues_LogModTime(t *testing.T) {
 	start := timeNow()
 
-	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+	kv, err := New(filepath.Join(t.TempDir(), testDir), GobExt)
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
 
@@ -217,19 +199,17 @@ func TestKeyValues_LogModTime(t *testing.T) {
 
 	err = kv.Cut("test")
 	testo.Error(t, err, false)
-
-	testo.Error(t, logRecordsCleanup(), false)
 }
 
 func TestKeyValues_Len(t *testing.T) {
-	kv := mockKeyValues()
+	kv := mockKeyValues(t)
 	testo.Nil(t, kv, false)
 	testo.EqualValues(t, kv.Len(), 2) // create 1; create 2; update 2; create 3; cut 1 = [2,3]
 }
 
 func TestKeyValues_FileModTime(t *testing.T) {
 	start := timeNow()
-	kv := mockKeyValues()
+	kv := mockKeyValues(t)
 	testo.Error(t, kv.writeLogRecord(nil), false)
 
 	testo.Error(t, kv.Set("1", strings.NewReader("one")), false)
@@ -244,12 +224,10 @@ func TestKeyValues_FileModTime(t *testing.T) {
 	testo.Error(t, err, false)
 	testo.CompareInt64(t, mt, start, testo.Less)
 	testo.CompareInt64(t, mt, UnknownModTime, testo.Equal)
-
-	testo.Error(t, logRecordsCleanup(), false)
 }
 
 func TestKeyValues_UpdateCompactsLog(t *testing.T) {
-	ikv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+	ikv, err := New(filepath.Join(t.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -272,13 +250,11 @@ func TestKeyValues_UpdateCompactsLog(t *testing.T) {
 
 	err = kv.Cut("1")
 	testo.Error(t, err, false)
-
-	testo.Error(t, logRecordsCleanup(), false)
 }
 
 func TestKeyValues_CutCompactsLog(t *testing.T) {
 
-	ikv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+	ikv, err := New(filepath.Join(t.TempDir(), testDir), GobExt)
 	testo.Error(t, err, false)
 
 	kv, ok := ikv.(*keyValues)
@@ -302,13 +278,10 @@ func TestKeyValues_CutCompactsLog(t *testing.T) {
 	err = kv.Cut("1")
 	testo.EqualValues(t, len(kv.log), 1) // log has been compacted to only store Cut operation
 	testo.Error(t, err, false)
-
-	testo.Error(t, logRecordsCleanup(), false)
-
 }
 
 func TestKeyValues_GoroutineSafe(t *testing.T) {
-	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+	kv, err := New(filepath.Join(t.TempDir(), testDir), GobExt)
 
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
@@ -349,13 +322,11 @@ func TestKeyValues_GoroutineSafe(t *testing.T) {
 	wg.Wait()
 
 	testo.EqualValues(t, kv.Len(), 0)
-
-	testo.Error(t, logRecordsCleanup(), false)
 }
 
 func TestKeyValues_SetNil(t *testing.T) {
 
-	kv, err := New(filepath.Join(os.TempDir(), testDir), GobExt)
+	kv, err := New(filepath.Join(t.TempDir(), testDir), GobExt)
 
 	testo.Nil(t, kv, false)
 	testo.Error(t, err, false)
@@ -364,6 +335,4 @@ func TestKeyValues_SetNil(t *testing.T) {
 	testo.Error(t, err, false)
 
 	testo.EqualValues(t, kv.Len(), 1)
-
-	testo.Error(t, logRecordsCleanup(), false)
 }
