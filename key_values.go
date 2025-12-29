@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"github.com/boggydigital/busan"
+	"github.com/boggydigital/pathways"
 	"io"
 	"iter"
 	"maps"
@@ -108,7 +108,7 @@ func (kv *keyValues) absLogRecordsFilename() string {
 }
 
 func (kv *keyValues) absValueFilename(key string) string {
-	return filepath.Join(kv.dir, busan.Sanitize(key)+kv.ext)
+	return filepath.Join(kv.dir, pathways.Sanitize(key)+kv.ext)
 }
 
 func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
