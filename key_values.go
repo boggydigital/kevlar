@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"github.com/boggydigital/pathways"
 	"io"
 	"iter"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/boggydigital/pathways"
 )
 
 const UnknownModTime = -1
@@ -46,7 +46,7 @@ func New(dir, ext string) (KeyValues, error) {
 		mtx:  new(sync.Mutex),
 	}
 
-	if err := kv.loadLogRecords(); os.IsNotExist(err) {
+	if err = kv.loadLogRecords(); os.IsNotExist(err) {
 		// do nothing, connecting to an empty key value store
 	} else if err != nil {
 		root.Close()
