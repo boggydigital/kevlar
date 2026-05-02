@@ -2,13 +2,15 @@ package kevlar
 
 import (
 	"bytes"
-	"github.com/boggydigital/testo"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/boggydigital/testo"
 )
 
 const (
@@ -16,9 +18,18 @@ const (
 )
 
 func mockKeyValues(t *testing.T) *keyValues {
+	dir := filepath.Join(t.TempDir(), testDir)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { root.Close() })
 	return &keyValues{
-		dir: filepath.Join(t.TempDir(), testDir),
-		ext: GobExt,
+		ext:  GobExt,
+		root: root,
 		log: []*logRecord{
 			{
 				Ts: 1,
@@ -74,7 +85,7 @@ func TestKeyValues_SetHasGetCut(t *testing.T) {
 
 			// Set, Has tests
 			for _, sk := range tt.set {
-				err := kv.Set(sk, strings.NewReader(sk))
+				err = kv.Set(sk, strings.NewReader(sk))
 				testo.Error(t, err, false)
 				has := kv.Has(sk)
 				testo.EqualValues(t, has, true)

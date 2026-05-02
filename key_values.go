@@ -18,10 +18,10 @@ import (
 const UnknownModTime = -1
 
 type keyValues struct {
-	dir string
-	ext string
-	log logRecords
-	mtx *sync.Mutex
+	ext  string
+	root *os.Root
+	log  logRecords
+	mtx  *sync.Mutex
 }
 
 // New connects a new local key value storage at the specified directory
@@ -35,15 +35,21 @@ func New(dir, ext string) (KeyValues, error) {
 		}
 	}
 
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	kv := &keyValues{
-		dir: dir,
-		ext: ext,
-		mtx: new(sync.Mutex),
+		ext:  ext,
+		root: root,
+		mtx:  new(sync.Mutex),
 	}
 
 	if err := kv.loadLogRecords(); os.IsNotExist(err) {
 		// do nothing, connecting to an empty key value store
 	} else if err != nil {
+		root.Close()
 		return nil, err
 	}
 
@@ -54,20 +60,14 @@ func timeNow() int64 {
 	return time.Now().UTC().Unix()
 }
 
-func createWriteOnlyFile(path string) (*os.File, error) {
+func (kv *keyValues) createWriteOnlyFile(name string) (*os.File, error) {
 	// not using O_EXCL intentionally here (meaning new file will be created even if the old exists)
 	// existing file presence would indicate an incomplete write (crash) during previous operation
 	// which among other things would mean:
 	// - existing log is in good condition and is only missing that last attempted operation
 	// - it's unclear what state existing file is, so it's not worth trying to salvage it
 	// - instead we're just ignoring it to avoid blocking (hopefully) good operations
-	dir, _ := filepath.Split(path)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err = os.MkdirAll(dir, 0755); err != nil {
-			return nil, err
-		}
-	}
-	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	return kv.root.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0644)
 }
 
 func sha256Bytes(reader io.Reader) ([]byte, error) {
@@ -78,8 +78,7 @@ func sha256Bytes(reader io.Reader) ([]byte, error) {
 
 func (kv *keyValues) loadLogRecords() error {
 
-	absLogFilename := kv.absLogRecordsFilename()
-	if _, err := os.Stat(absLogFilename); os.IsNotExist(err) {
+	if _, err := kv.root.Stat(logRecordsFilename); os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
 		return err
@@ -88,7 +87,7 @@ func (kv *keyValues) loadLogRecords() error {
 	kv.mtx.Lock()
 	defer kv.mtx.Unlock()
 
-	logFile, err := os.Open(absLogFilename)
+	logFile, err := kv.root.Open(logRecordsFilename)
 	if err != nil {
 		return err
 	}
@@ -103,19 +102,15 @@ func (kv *keyValues) loadLogRecords() error {
 	return nil
 }
 
-func (kv *keyValues) absLogRecordsFilename() string {
-	return filepath.Join(kv.dir, logRecordsFilename)
+func (kv *keyValues) valueFilename(key string) string {
+	return pathways.Sanitize(key) + kv.ext
 }
 
-func (kv *keyValues) absValueFilename(key string) string {
-	return filepath.Join(kv.dir, pathways.Sanitize(key)+kv.ext)
-}
+func (kv *keyValues) writeAtomically(name string, r io.Reader) error {
 
-func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
+	newName := name + newExt
 
-	newPath := path + newExt
-
-	newFile, err := createWriteOnlyFile(newPath)
+	newFile, err := kv.createWriteOnlyFile(newName)
 	if err != nil {
 		return err
 	}
@@ -134,11 +129,11 @@ func (kv *keyValues) writeAtomically(path string, r io.Reader) error {
 		return err
 	}
 
-	if _, err = os.Stat(newPath); os.IsNotExist(err) {
+	if _, err = kv.root.Stat(newName); os.IsNotExist(err) {
 		return nil
 	}
 
-	return os.Rename(newPath, path)
+	return kv.root.Rename(newName, name)
 }
 
 // createLogRecord appends a new Create log record
@@ -215,7 +210,7 @@ func (kv *keyValues) writeLogRecord(rec *logRecord) error {
 		return err
 	}
 
-	if err := kv.writeAtomically(kv.absLogRecordsFilename(), buf); err != nil {
+	if err := kv.writeAtomically(logRecordsFilename, buf); err != nil {
 		return err
 	}
 
@@ -265,7 +260,7 @@ func (kv *keyValues) Has(key string) bool {
 }
 
 func (kv *keyValues) Get(key string) (io.ReadCloser, error) {
-	return os.Open(kv.absValueFilename(key))
+	return kv.root.Open(kv.valueFilename(key))
 }
 
 // Set writes the value to storage if the value has changed since the
@@ -288,7 +283,7 @@ func (kv *keyValues) Set(key string, reader io.Reader) error {
 	}
 
 	kv.mtx.Lock()
-	if err = kv.writeAtomically(kv.absValueFilename(key), buf); err != nil {
+	if err = kv.writeAtomically(kv.valueFilename(key), buf); err != nil {
 		kv.mtx.Unlock()
 		return err
 	}
@@ -309,9 +304,9 @@ func (kv *keyValues) Cut(key string) error {
 		return nil
 	}
 
-	absValueFilename := kv.absValueFilename(key)
-	if _, err := os.Stat(absValueFilename); err == nil {
-		if err = os.Remove(absValueFilename); err != nil {
+	absValueFilename := kv.valueFilename(key)
+	if _, err := kv.root.Stat(absValueFilename); err == nil {
+		if err = kv.root.Remove(absValueFilename); err != nil {
 			return err
 		}
 	}
@@ -339,7 +334,7 @@ func (kv *keyValues) LogModTime(key string) int64 {
 }
 
 func (kv *keyValues) FileModTime(key string) (int64, error) {
-	if stat, err := os.Stat(kv.absValueFilename(key)); err == nil {
+	if stat, err := kv.root.Stat(kv.valueFilename(key)); err == nil {
 		return stat.ModTime().UTC().Unix(), nil
 	} else if os.IsNotExist(err) {
 		return UnknownModTime, nil
