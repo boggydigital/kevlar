@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/boggydigital/pathways"
+	"github.com/boggydigital/camino"
 )
 
 const UnknownModTime = -1
@@ -103,7 +103,7 @@ func (kv *keyValues) loadLogRecords() error {
 }
 
 func (kv *keyValues) valueFilename(key string) string {
-	return pathways.Sanitize(key) + kv.ext
+	return camino.Sanitize(key) + kv.ext
 }
 
 func (kv *keyValues) writeAtomically(name string, r io.Reader) error {
